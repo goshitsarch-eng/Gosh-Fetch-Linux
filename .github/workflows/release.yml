@@ -302,6 +302,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfuse2 file
 
+          # Install frontend-specific dependencies for bundling
+          if [ "${{ matrix.frontend }}" = "gtk" ]; then
+            sudo apt-get install -y libgtk-4-1 libadwaita-1-0
+          elif [ "${{ matrix.frontend }}" = "cosmic" ]; then
+            sudo apt-get install -y libxkbcommon0 libwayland-client0 libvulkan1
+          elif [ "${{ matrix.frontend }}" = "qt" ]; then
+            sudo apt-get install -y libqt6core6 libqt6gui6 libqt6widgets6 libqt6qml6
+          fi
+
       - name: Download linuxdeploy
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.appimage_arch }}.AppImage

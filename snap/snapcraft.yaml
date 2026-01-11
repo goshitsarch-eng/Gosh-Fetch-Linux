@@ -1,5 +1,6 @@
 name: gosh-fetch
 version: '2.0.0'
+title: Gosh Fetch
 summary: Modern download manager for Linux
 description: |
   Gosh Fetch is a powerful and modern download manager for Linux with support
@@ -12,6 +13,11 @@ description: |
   - Download scheduling and queue management
   - System tray integration
   - Modern, adaptive UI
+license: AGPL-3.0
+contact: https://github.com/goshitsarch-eng/Gosh-Fetch-Linux/issues
+source-code: https://github.com/goshitsarch-eng/Gosh-Fetch-Linux
+issues: https://github.com/goshitsarch-eng/Gosh-Fetch-Linux/issues
+website: https://github.com/goshitsarch-eng/Gosh-Fetch-Linux
 
 grade: stable
 confinement: strict
@@ -28,7 +34,7 @@ layout:
 
 apps:
   gosh-fetch:
-    command: usr/bin/gosh-fetch-gtk
+    command: bin/gosh-fetch-gtk
     desktop: usr/share/applications/io.github.gosh.Fetch.desktop
     extensions: [gnome]
     plugs:
