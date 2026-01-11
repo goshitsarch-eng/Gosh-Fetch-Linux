@@ -274,18 +274,15 @@ impl ffi::AppController {
         // Update from global state
         if let Ok(downloads) = DOWNLOADS.lock() {
             self.as_mut().set_active_count(downloads.len() as i32);
-            self.downloads = downloads.clone();
         }
         if let Ok(completed) = COMPLETED.lock() {
             self.as_mut().set_completed_count(completed.len() as i32);
-            self.completed = completed.clone();
         }
         if let Ok(stats) = STATS.lock() {
             self.as_mut()
                 .set_download_speed(QString::from(&format_speed(stats.download_speed)));
             self.as_mut()
                 .set_upload_speed(QString::from(&format_speed(stats.upload_speed)));
-            self.stats = stats.clone();
         }
 
         // Request refresh from engine

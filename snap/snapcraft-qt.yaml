@@ -1,10 +1,10 @@
-name: gosh-fetch
+name: gosh-fetch-qt
 version: '2.0.0'
-summary: Modern download manager for Linux
+summary: Modern download manager for Linux (Qt)
 description: |
   Gosh Fetch is a powerful and modern download manager for Linux with support
-  for HTTP, HTTPS, and BitTorrent downloads. Built with GTK4 and libadwaita for
-  a native GNOME experience.
+  for HTTP, HTTPS, and BitTorrent downloads. Built with Qt6 for a native
+  KDE Plasma experience.
 
   Features:
   - HTTP/HTTPS downloads with resume support
@@ -22,15 +22,11 @@ platforms:
   amd64:
   arm64:
 
-layout:
-  /usr/share/libadwaita-1:
-    bind: $SNAP/usr/share/libadwaita-1
-
 apps:
-  gosh-fetch:
-    command: usr/bin/gosh-fetch-gtk
+  gosh-fetch-qt:
+    command: usr/bin/gosh-fetch-qt
     desktop: usr/share/applications/io.github.gosh.Fetch.desktop
-    extensions: [gnome]
+    extensions: [kde-neon-6]
     plugs:
       - home
       - desktop
@@ -53,17 +49,24 @@ parts:
     plugin: rust
     source: .
     build-packages:
-      - libgtk-4-dev
-      - libadwaita-1-dev
-      - libdbus-1-dev
+      - cmake
+      - ninja-build
+      - qt6-base-dev
+      - qt6-declarative-dev
+      - libqt6opengl6-dev
+      - libqt6svg6-dev
       - libssl-dev
+      - libdbus-1-dev
     stage-packages:
-      - libgtk-4-1
-      - libadwaita-1-0
+      - libqt6core6
+      - libqt6gui6
+      - libqt6widgets6
+      - libqt6qml6
+      - libqt6quick6
       - libdbus-1-3
     rust-channel: stable
     rust-path:
-      - crates/gosh-fetch-gtk
+      - crates/gosh-fetch-qt
     override-build: |
       craftctl default
       install -Dm644 ${CRAFT_PART_SRC}/gosh-fetch.desktop ${CRAFT_PART_INSTALL}/usr/share/applications/io.github.gosh.Fetch.desktop
