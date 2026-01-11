@@ -325,10 +325,13 @@ jobs:
           chmod +x target/release/gosh-fetch-${{ matrix.frontend }}
           export VERSION=${{ steps.version.outputs.version }}
 
+          # Create frontend-specific desktop file
+          sed "s/gosh-fetch-gtk/gosh-fetch-${{ matrix.frontend }}/g" gosh-fetch.desktop > gosh-fetch-${{ matrix.frontend }}.desktop
+
           ./linuxdeploy-${{ matrix.appimage_arch }}.AppImage \
             --appdir AppDir \
             --executable target/release/gosh-fetch-${{ matrix.frontend }} \
-            --desktop-file gosh-fetch.desktop \
+            --desktop-file gosh-fetch-${{ matrix.frontend }}.desktop \
             --icon-file resources/io.github.gosh.Fetch.png \
             --output appimage
 
