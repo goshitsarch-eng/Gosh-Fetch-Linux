@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gosh.Fetch</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0</project_license>
+  <name>Gosh Fetch</name>
+  <summary>Modern download manager for Linux</summary>
+
+  <description>
+    <p>
+      Gosh Fetch is a powerful and modern download manager for Linux with support
+      for HTTP, HTTPS, and BitTorrent downloads. Built with GTK4 and libadwaita for
+      a native GNOME experience.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>HTTP/HTTPS downloads with resume support</li>
+      <li>BitTorrent and magnet link support</li>
+      <li>Download scheduling and queue management</li>
+      <li>System tray integration</li>
+      <li>Modern, adaptive UI</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.gosh.Fetch.desktop</launchable>
+
+  <url type="homepage">https://github.com/goshitsarch-eng/Gosh-Fetch-linux</url>
+  <url type="bugtracker">https://github.com/goshitsarch-eng/Gosh-Fetch-linux/issues</url>
+  <url type="vcs-browser">https://github.com/goshitsarch-eng/Gosh-Fetch-linux</url>
+
+  <developer id="io.github.gosh">
+    <name>Gosh</name>
+  </developer>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#62a0ea</color>
+    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+  </branding>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window showing active downloads</caption>
+      <image>https://raw.githubusercontent.com/goshitsarch-eng/Gosh-Fetch-linux/main/docs/screenshots/main.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="2.0.0" date="2025-01-10">
+      <description>
+        <p>Initial release with GTK4/libadwaita interface</p>
+      </description>
+    </release>
+  </releases>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+</component>

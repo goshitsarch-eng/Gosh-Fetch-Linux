@@ -1,0 +1,64 @@
+/* Gosh-Fetch Custom Styles */
+
+/* Badge styling */
+.badge {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.8em;
+    font-weight: bold;
+    min-width: 1.5em;
+}
+
+/* Status colors */
+.success {
+    color: @success_color;
+}
+
+.warning {
+    color: @warning_color;
+}
+
+.error {
+    color: @error_color;
+}
+
+/* Download card */
+.card {
+    background-color: @card_bg_color;
+    border-radius: 12px;
+    padding: 0;
+}
+
+/* Progress bar */
+progressbar > trough {
+    min-height: 8px;
+    border-radius: 4px;
+}
+
+progressbar > trough > progress {
+    border-radius: 4px;
+}
+
+/* Heading style */
+.heading {
+    font-weight: bold;
+}
+
+/* Caption style */
+.caption {
+    font-size: 0.85em;
+}
+
+/* Navigation sidebar */
+.navigation-sidebar row {
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin: 2px 8px;
+}
+
+.navigation-sidebar row:selected {
+    background-color: @accent_bg_color;
+    color: @accent_fg_color;
+}

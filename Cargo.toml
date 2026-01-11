@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gosh-fetch-core",
+    "crates/gosh-fetch-gtk",
+    "crates/gosh-fetch-cosmic",
+    "crates/gosh-fetch-qt",
+]
+default-members = ["crates/gosh-fetch-gtk"]
+
+[workspace.package]
+version = "2.0.0"
+authors = ["Gosh"]
+license = "AGPL-3.0"
+repository = "https://github.com/goshitsarch-eng/Gosh-Fetch-linux"
+edition = "2021"
+
+[workspace.dependencies]
+# Core crate
+gosh-fetch-core = { path = "crates/gosh-fetch-core" }
+
+# Download engine
+gosh-dl = { git = "https://github.com/goshitsarch-eng/gosh-dl" }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-channel = "2"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Async utilities
+futures = "0.3"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+log = "0.4"
+env_logger = "0.11"
+reqwest = { version = "0.12", features = ["json"] }
+dirs = "5"
+uuid = { version = "1", features = ["v4"] }
+hex = "0.4"
+once_cell = "1"
+
+# GTK dependencies
+gtk = { version = "0.9", package = "gtk4", features = ["v4_14"] }
+adw = { version = "0.7", package = "libadwaita", features = ["v1_5"] }
+glib = "0.20"
+gio = "0.20"
+glib-build-tools = "0.20"
+
+# System tray
+ksni = "0.2"
+
+# File operations
+open = "5"
+rfd = "0.14"
+
+# COSMIC dependencies (pinned to commit before spin_button a11y bug)
+libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "f603959", default-features = false, features = ["winit", "tokio", "wgpu"] }
+
+# Qt/CXX-Qt dependencies
+cxx = "1.0"
+cxx-qt = "0.7"
+cxx-qt-lib = { version = "0.7", features = ["qt_full"] }
+cxx-qt-build = { version = "0.7", features = ["link_qt_object_files"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -1,0 +1,57 @@
+version: 1
+script:
+  - rm -rf AppDir || true
+  - mkdir -p AppDir/usr/bin
+  - mkdir -p AppDir/usr/share/applications
+  - mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+  - mkdir -p AppDir/usr/share/metainfo
+  - cp ../../target/release/gosh-fetch-gtk AppDir/usr/bin/
+  - cp ../../gosh-fetch.desktop AppDir/usr/share/applications/io.github.gosh.Fetch.desktop
+  - cp ../../resources/io.github.gosh.Fetch.png AppDir/usr/share/icons/hicolor/256x256/apps/
+  - cp ../../io.github.gosh.Fetch.metainfo.xml AppDir/usr/share/metainfo/
+
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: io.github.gosh.Fetch
+    name: Gosh Fetch
+    icon: io.github.gosh.Fetch
+    version: 2.0.0
+    exec: usr/bin/gosh-fetch-gtk
+    exec_args: $@
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: deb http://archive.ubuntu.com/ubuntu/ noble main universe
+        key_url: http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C
+
+    include:
+      - libgtk-4-1
+      - libadwaita-1-0
+      - libdbus-1-3
+      - librsvg2-common
+      - libglib2.0-0
+      - libpango-1.0-0
+      - libcairo2
+      - libgdk-pixbuf-2.0-0
+
+  runtime:
+    env:
+      GTK_THEME: Adwaita
+
+  test:
+    fedora-30:
+      image: appimagecrafters/tests-env:fedora-30
+      command: ./AppRun
+    debian-stable:
+      image: appimagecrafters/tests-env:debian-stable
+      command: ./AppRun
+    ubuntu-focal:
+      image: appimagecrafters/tests-env:ubuntu-focal
+      command: ./AppRun
+
+AppImage:
+  arch: x86_64
+  update-information: gh-releases-zsync|goshitsarch-eng|Gosh-Fetch-linux|latest|*x86_64.AppImage.zsync

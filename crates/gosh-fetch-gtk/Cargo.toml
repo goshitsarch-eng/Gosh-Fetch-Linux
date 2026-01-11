@@ -1,0 +1,29 @@
+[package]
+name = "gosh-fetch-gtk"
+description = "GTK4/libadwaita frontend for Gosh-Fetch"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "gosh-fetch-gtk"
+path = "src/main.rs"
+
+[dependencies]
+gosh-fetch-core.workspace = true
+gtk.workspace = true
+adw.workspace = true
+glib.workspace = true
+gio.workspace = true
+tokio.workspace = true
+async-channel.workspace = true
+log.workspace = true
+env_logger.workspace = true
+once_cell.workspace = true
+ksni.workspace = true
+open.workspace = true
+
+[build-dependencies]
+glib-build-tools.workspace = true

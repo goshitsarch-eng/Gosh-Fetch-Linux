@@ -1,0 +1,58 @@
+# Build artifacts
+/target/
+**/*.rs.bk
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local development
+.env
+.env.local
+*.local
+
+# Debug files
+*.log
+core
+vgcore.*
+
+# Flatpak build
+.flatpak-builder/
+builddir/
+repo/
+*.flatpak
+
+# Snap build
+*.snap
+parts/
+prime/
+stage/
+
+# AppImage build
+*.AppImage
+AppDir/
+
+# Generated documentation
+/docs/generated/
+
+# Test coverage
+*.profraw
+*.profdata
+coverage/
+lcov.info
+tarpaulin-report.html
+
+# Backup files
+*.bak
+*.orig

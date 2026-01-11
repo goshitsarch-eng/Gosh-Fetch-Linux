@@ -1,0 +1,559 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v2.0.0)'
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  # =============================================================================
+  # Build binaries for all architectures
+  # =============================================================================
+  build-gtk:
+    name: Build GTK (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            libdbus-1-dev \
+            libssl-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --package gosh-fetch-gtk --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosh-fetch-gtk-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/gosh-fetch-gtk
+
+  build-cosmic:
+    name: Build COSMIC (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libinput-dev \
+            libudev-dev \
+            libseat-dev \
+            libdbus-1-dev \
+            libpulse-dev \
+            libexpat1-dev \
+            libfontconfig-dev \
+            libfreetype-dev \
+            libssl-dev \
+            libpipewire-0.3-dev \
+            mesa-vulkan-drivers \
+            libvulkan-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --package gosh-fetch-cosmic --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosh-fetch-cosmic-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/gosh-fetch-cosmic
+
+  build-qt:
+    name: Build Qt (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            libqt6opengl6-dev \
+            libqt6svg6-dev \
+            libssl-dev \
+            libdbus-1-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --package gosh-fetch-qt --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosh-fetch-qt-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/gosh-fetch-qt
+
+  # =============================================================================
+  # Package: DEB
+  # =============================================================================
+  package-deb:
+    name: Package DEB (${{ matrix.arch }})
+    needs: build-gtk
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            deb_arch: amd64
+          - arch: aarch64
+            deb_arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gosh-fetch-gtk-${{ matrix.arch }}
+          path: target/release/
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build DEB package
+        run: |
+          chmod +x target/release/gosh-fetch-gtk
+          cd packaging/deb
+          ./build-deb.sh ${{ steps.version.outputs.version }} ${{ matrix.deb_arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch }}
+          path: packaging/deb/*.deb
+
+  # =============================================================================
+  # Package: RPM
+  # =============================================================================
+  package-rpm:
+    name: Package RPM (${{ matrix.arch }})
+    needs: build-gtk
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    container: fedora:41
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            rpm_arch: x86_64
+          - arch: aarch64
+            rpm_arch: aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y rpm-build rpmdevtools
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gosh-fetch-gtk-${{ matrix.arch }}
+          path: binary/
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Setup RPM build tree
+        run: rpmdev-setuptree
+
+      - name: Prepare source tarball
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          mkdir -p gosh-fetch-${VERSION}
+          cp -r * gosh-fetch-${VERSION}/ 2>/dev/null || true
+          mkdir -p gosh-fetch-${VERSION}/target/release
+          cp binary/gosh-fetch-gtk gosh-fetch-${VERSION}/target/release/
+          chmod +x gosh-fetch-${VERSION}/target/release/gosh-fetch-gtk
+          tar czf ~/rpmbuild/SOURCES/gosh-fetch-${VERSION}.tar.gz gosh-fetch-${VERSION}
+
+      - name: Update spec version
+        run: |
+          sed -i "s/^Version:.*/Version:        ${{ steps.version.outputs.version }}/" packaging/rpm/gosh-fetch.spec
+
+      - name: Build RPM
+        run: |
+          rpmbuild -bb packaging/rpm/gosh-fetch.spec \
+            --define "_topdir $HOME/rpmbuild" \
+            --define "debug_package %{nil}" \
+            --target ${{ matrix.rpm_arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: ~/rpmbuild/RPMS/**/*.rpm
+
+  # =============================================================================
+  # Package: AppImage
+  # =============================================================================
+  package-appimage:
+    name: Package AppImage (${{ matrix.arch }})
+    needs: build-gtk
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+            appimage_arch: x86_64
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+            appimage_arch: aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gosh-fetch-gtk-${{ matrix.arch }}
+          path: target/release/
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-4-1 \
+            libadwaita-1-0 \
+            libfuse2 \
+            file
+
+      - name: Download linuxdeploy
+        run: |
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+            chmod +x linuxdeploy-x86_64.AppImage
+          else
+            wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-aarch64.AppImage
+            chmod +x linuxdeploy-aarch64.AppImage
+          fi
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build AppImage
+        run: |
+          chmod +x target/release/gosh-fetch-gtk
+          export VERSION=${{ steps.version.outputs.version }}
+
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            ./linuxdeploy-x86_64.AppImage \
+              --appdir AppDir \
+              --executable target/release/gosh-fetch-gtk \
+              --desktop-file gosh-fetch.desktop \
+              --icon-file resources/io.github.gosh.Fetch.png \
+              --output appimage
+          else
+            ./linuxdeploy-aarch64.AppImage \
+              --appdir AppDir \
+              --executable target/release/gosh-fetch-gtk \
+              --desktop-file gosh-fetch.desktop \
+              --icon-file resources/io.github.gosh.Fetch.png \
+              --output appimage
+          fi
+
+      - name: Rename AppImage
+        run: mv Gosh_Fetch*.AppImage gosh-fetch-${{ steps.version.outputs.version }}-${{ matrix.appimage_arch }}.AppImage
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-${{ matrix.arch }}
+          path: "*.AppImage"
+
+  # =============================================================================
+  # Package: Flatpak
+  # =============================================================================
+  package-flatpak:
+    name: Package Flatpak (${{ matrix.arch }})
+    needs: build-gtk
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            flatpak_arch: x86_64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            flatpak_arch: aarch64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gosh-fetch-gtk-${{ matrix.arch }}
+          path: target/release/
+
+      - name: Install Flatpak and tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+
+      - name: Setup Flatpak
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Create simple Flatpak manifest
+        run: |
+          chmod +x target/release/gosh-fetch-gtk
+          cat > io.github.gosh.Fetch.build.yml << 'EOF'
+          app-id: io.github.gosh.Fetch
+          runtime: org.gnome.Platform
+          runtime-version: '47'
+          sdk: org.gnome.Sdk
+          command: gosh-fetch-gtk
+          finish-args:
+            - --share=ipc
+            - --socket=fallback-x11
+            - --socket=wayland
+            - --share=network
+            - --filesystem=xdg-download
+            - --filesystem=xdg-documents
+            - --talk-name=org.freedesktop.Notifications
+            - --talk-name=org.kde.StatusNotifierWatcher
+          modules:
+            - name: gosh-fetch
+              buildsystem: simple
+              build-commands:
+                - install -Dm755 gosh-fetch-gtk /app/bin/gosh-fetch-gtk
+                - install -Dm644 gosh-fetch.desktop /app/share/applications/io.github.gosh.Fetch.desktop
+                - install -Dm644 io.github.gosh.Fetch.metainfo.xml /app/share/metainfo/io.github.gosh.Fetch.metainfo.xml
+                - install -Dm644 io.github.gosh.Fetch.png /app/share/icons/hicolor/256x256/apps/io.github.gosh.Fetch.png
+              sources:
+                - type: file
+                  path: target/release/gosh-fetch-gtk
+                - type: file
+                  path: gosh-fetch.desktop
+                - type: file
+                  path: io.github.gosh.Fetch.metainfo.xml
+                - type: file
+                  path: resources/io.github.gosh.Fetch.png
+          EOF
+
+      - name: Build Flatpak
+        run: |
+          flatpak-builder --force-clean --repo=repo build-dir io.github.gosh.Fetch.build.yml
+          flatpak build-bundle repo gosh-fetch-${{ steps.version.outputs.version }}-${{ matrix.flatpak_arch }}.flatpak io.github.gosh.Fetch
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-${{ matrix.arch }}
+          path: "*.flatpak"
+
+  # =============================================================================
+  # Package: Snap
+  # =============================================================================
+  package-snap:
+    name: Package Snap (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            snap_arch: amd64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            snap_arch: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update snap version
+        run: |
+          sed -i "s/^version:.*/version: '${{ steps.version.outputs.version }}'/" snap/snapcraft.yaml
+
+      - name: Build Snap
+        uses: snapcore/action-build@v1
+        id: build
+
+      - name: Rename snap
+        run: mv ${{ steps.build.outputs.snap }} gosh-fetch-${{ steps.version.outputs.version }}-${{ matrix.snap_arch }}.snap
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap-${{ matrix.arch }}
+          path: "*.snap"
+
+  # =============================================================================
+  # Create Release
+  # =============================================================================
+  release:
+    name: Create Release
+    needs:
+      - build-gtk
+      - build-cosmic
+      - build-qt
+      - package-deb
+      - package-rpm
+      - package-appimage
+      - package-flatpak
+      - package-snap
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          VERSION=${{ steps.version.outputs.version }}
+
+          # GTK binaries (tarball)
+          for arch in x86_64 aarch64; do
+            cp artifacts/gosh-fetch-gtk-${arch}/gosh-fetch-gtk release-assets/
+            chmod +x release-assets/gosh-fetch-gtk
+            tar -czvf release-assets/gosh-fetch-gtk-${VERSION}-linux-${arch}.tar.gz \
+              -C release-assets gosh-fetch-gtk
+            rm release-assets/gosh-fetch-gtk
+          done
+
+          # COSMIC binaries (tarball)
+          for arch in x86_64 aarch64; do
+            cp artifacts/gosh-fetch-cosmic-${arch}/gosh-fetch-cosmic release-assets/
+            chmod +x release-assets/gosh-fetch-cosmic
+            tar -czvf release-assets/gosh-fetch-cosmic-${VERSION}-linux-${arch}.tar.gz \
+              -C release-assets gosh-fetch-cosmic
+            rm release-assets/gosh-fetch-cosmic
+          done
+
+          # Qt binaries (tarball)
+          for arch in x86_64 aarch64; do
+            cp artifacts/gosh-fetch-qt-${arch}/gosh-fetch-qt release-assets/
+            chmod +x release-assets/gosh-fetch-qt
+            tar -czvf release-assets/gosh-fetch-qt-${VERSION}-linux-${arch}.tar.gz \
+              -C release-assets gosh-fetch-qt
+            rm release-assets/gosh-fetch-qt
+          done
+
+          # DEB packages
+          cp artifacts/deb-x86_64/*.deb release-assets/ || true
+          cp artifacts/deb-aarch64/*.deb release-assets/ || true
+
+          # RPM packages
+          find artifacts/rpm-* -name "*.rpm" -exec cp {} release-assets/ \; || true
+
+          # AppImage
+          cp artifacts/appimage-*/*.AppImage release-assets/ || true
+
+          # Flatpak
+          cp artifacts/flatpak-*/*.flatpak release-assets/ || true
+
+          # Snap
+          cp artifacts/snap-*/*.snap release-assets/ || true
+
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Gosh Fetch v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            release-assets/*

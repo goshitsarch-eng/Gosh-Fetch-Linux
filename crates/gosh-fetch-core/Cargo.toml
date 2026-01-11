@@ -1,0 +1,22 @@
+[package]
+name = "gosh-fetch-core"
+description = "Core library for Gosh-Fetch download manager"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[dependencies]
+gosh-dl.workspace = true
+tokio.workspace = true
+async-channel.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+thiserror.workspace = true
+log.workspace = true
+reqwest.workspace = true
+dirs.workspace = true
+uuid.workspace = true

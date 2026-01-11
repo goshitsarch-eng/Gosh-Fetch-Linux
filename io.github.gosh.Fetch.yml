@@ -1,0 +1,39 @@
+app-id: io.github.gosh.Fetch
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: gosh-fetch-gtk
+
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --share=network
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-*
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/gosh-fetch/cargo
+    RUST_BACKTRACE: '1'
+
+modules:
+  - name: gosh-fetch
+    buildsystem: simple
+    build-commands:
+      - cargo --offline fetch --manifest-path Cargo.toml --verbose
+      - cargo --offline build --release --package gosh-fetch-gtk --verbose
+      - install -Dm755 target/release/gosh-fetch-gtk -t /app/bin/
+      - install -Dm644 gosh-fetch.desktop /app/share/applications/io.github.gosh.Fetch.desktop
+      - install -Dm644 io.github.gosh.Fetch.metainfo.xml /app/share/metainfo/io.github.gosh.Fetch.metainfo.xml
+      - install -Dm644 resources/io.github.gosh.Fetch.png /app/share/icons/hicolor/256x256/apps/io.github.gosh.Fetch.png
+    sources:
+      - type: dir
+        path: .
+      - cargo-sources.json
