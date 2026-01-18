@@ -167,31 +167,21 @@ jobs:
           path: ~/rpmbuild/RPMS/**/*.rpm
 
   # =============================================================================
-  # Package: AppImage
+  # Package: AppImage (x86_64 only)
   # =============================================================================
   package-appimage:
-    name: Package AppImage (${{ matrix.arch }})
+    name: Package AppImage (x86_64)
     needs: [build-gtk]
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
-    strategy:
-      matrix:
-        arch: [x86_64, aarch64]
-        include:
-          - arch: x86_64
-            runner: ubuntu-22.04
-            appimage_arch: x86_64
-          - arch: aarch64
-            runner: ubuntu-22.04-arm
-            appimage_arch: aarch64
     steps:
       - uses: actions/checkout@v4
 
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: gosh-fetch-gtk-${{ matrix.arch }}
+          name: gosh-fetch-gtk-x86_64
           path: target/release/
 
       - name: Install dependencies
@@ -201,8 +191,8 @@ jobs:
 
       - name: Download linuxdeploy
         run: |
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.appimage_arch }}.AppImage
-          chmod +x linuxdeploy-${{ matrix.appimage_arch }}.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
 
       - name: Get version
         id: version
@@ -213,7 +203,7 @@ jobs:
           chmod +x target/release/gosh-fetch-gtk
           export VERSION=${{ steps.version.outputs.version }}
 
-          ./linuxdeploy-${{ matrix.appimage_arch }}.AppImage \
+          ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --executable target/release/gosh-fetch-gtk \
             --desktop-file gosh-fetch.desktop \
@@ -221,39 +211,30 @@ jobs:
             --output appimage
 
       - name: Rename AppImage
-        run: mv Gosh_Fetch*.AppImage gosh-fetch-gtk-${{ steps.version.outputs.version }}-${{ matrix.appimage_arch }}.AppImage
+        run: mv Gosh_Fetch*.AppImage gosh-fetch-gtk-${{ steps.version.outputs.version }}-x86_64.AppImage
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: appimage-gtk-${{ matrix.arch }}
+          name: appimage-gtk-x86_64
           path: "*.AppImage"
 
   # =============================================================================
-  # Package: Flatpak
+  # Package: Flatpak (x86_64 only)
   # =============================================================================
   package-flatpak-gtk:
-    name: Package Flatpak GTK (${{ matrix.arch }})
+    name: Package Flatpak GTK (x86_64)
     needs: build-gtk
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-            flatpak_arch: x86_64
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            flatpak_arch: aarch64
     steps:
       - uses: actions/checkout@v4
 
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: gosh-fetch-gtk-${{ matrix.arch }}
+          name: gosh-fetch-gtk-x86_64
           path: target/release/
 
       - name: Install Flatpak and tools
@@ -312,54 +293,13 @@ jobs:
       - name: Build Flatpak
         run: |
           flatpak-builder --force-clean --repo=repo build-dir io.github.gosh.Fetch.yml
-          flatpak build-bundle repo gosh-fetch-gtk-${{ steps.version.outputs.version }}-${{ matrix.flatpak_arch }}.flatpak io.github.gosh.Fetch
+          flatpak build-bundle repo gosh-fetch-gtk-${{ steps.version.outputs.version }}-x86_64.flatpak io.github.gosh.Fetch
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flatpak-gtk-${{ matrix.arch }}
+          name: flatpak-gtk-x86_64
           path: "*.flatpak"
-
-  # =============================================================================
-  # Package: Snap
-  # =============================================================================
-  package-snap:
-    name: Package Snap (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-            snap_arch: amd64
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            snap_arch: arm64
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get version
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Update snap version
-        run: |
-          sed -i "s/^version:.*/version: '${{ steps.version.outputs.version }}'/" snap/snapcraft.yaml
-
-      - name: Build Snap
-        uses: snapcore/action-build@v1
-        id: build
-
-      - name: Rename snap
-        run: mv ${{ steps.build.outputs.snap }} gosh-fetch-gtk-${{ steps.version.outputs.version }}-${{ matrix.snap_arch }}.snap
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: snap-gtk-${{ matrix.arch }}
-          path: "*.snap"
 
   # =============================================================================
   # Create Release
@@ -372,7 +312,6 @@ jobs:
       - package-rpm
       - package-appimage
       - package-flatpak-gtk
-      - package-snap
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -415,9 +354,6 @@ jobs:
 
           # Flatpak
           find artifacts -name "*.flatpak" -exec cp {} release-assets/ \; || true
-
-          # Snap
-          find artifacts -name "*.snap" -exec cp {} release-assets/ \; || true
 
       - name: Generate checksums
         run: |
