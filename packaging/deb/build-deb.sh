@@ -12,20 +12,8 @@ case "$FRONTEND" in
     DEPENDS="libgtk-4-1 (>= 4.14), libadwaita-1-0 (>= 1.5), libdbus-1-3"
     DESCRIPTION="Built with GTK4 and libadwaita for a native GNOME experience."
     ;;
-  cosmic)
-    PACKAGE_NAME="gosh-fetch-cosmic"
-    BINARY_NAME="gosh-fetch-cosmic"
-    DEPENDS="libxkbcommon0, libwayland-client0, libinput10, libudev1, libseat1, libdbus-1-3, libvulkan1"
-    DESCRIPTION="Built with libcosmic for a native COSMIC desktop experience."
-    ;;
-  qt)
-    PACKAGE_NAME="gosh-fetch-qt"
-    BINARY_NAME="gosh-fetch-qt"
-    DEPENDS="libqt6core6, libqt6gui6, libqt6widgets6, libqt6qml6, libqt6quick6, libdbus-1-3"
-    DESCRIPTION="Built with Qt6 for a native KDE Plasma experience."
-    ;;
   *)
-    echo "Unknown frontend: $FRONTEND (use gtk, cosmic, or qt)"
+    echo "Unknown frontend: $FRONTEND (use gtk)"
     exit 1
     ;;
 esac
