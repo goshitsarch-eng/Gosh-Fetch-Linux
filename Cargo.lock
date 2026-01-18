@@ -1280,7 +1280,7 @@ dependencies = [
 
 [[package]]
 name = "gosh-fetch-core"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "async-channel",
  "chrono",
@@ -1298,7 +1298,7 @@ dependencies = [
 
 [[package]]
 name = "gosh-fetch-gtk"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "async-channel",
  "chrono",

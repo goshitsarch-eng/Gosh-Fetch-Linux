@@ -179,7 +179,7 @@ impl GoshFetchApplication {
             .application_name("Gosh-Fetch")
             .application_icon("io.github.gosh.Fetch")
             .developer_name("Gosh")
-            .version("2.0.0")
+            .version("2.1.0")
             .website("https://github.com/goshitsarch-eng/Gosh-Fetch-linux")
             .issue_url("https://github.com/goshitsarch-eng/Gosh-Fetch-linux/issues")
             .license_type(gtk::License::Agpl30)
