@@ -24,6 +24,8 @@ env_logger.workspace = true
 once_cell.workspace = true
 ksni.workspace = true
 open.workspace = true
+notify-rust.workspace = true
+chrono.workspace = true
 
 [build-dependencies]
 glib-build-tools.workspace = true

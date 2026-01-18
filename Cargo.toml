@@ -55,6 +55,9 @@ glib-build-tools = "0.20"
 # System tray
 ksni = "0.2"
 
+# Desktop notifications
+notify-rust = "4"
+
 # File operations
 open = "5"
 rfd = "0.14"

@@ -5,8 +5,9 @@ mod imp;
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::{gio, glib};
+use notify_rust::Notification;
 
-use gosh_fetch_core::{Database, EngineCommand, UiMessage};
+use gosh_fetch_core::{Database, Download, EngineCommand, UiMessage};
 
 glib::wrapper! {
     pub struct GoshFetchWindow(ObjectSubclass<imp::GoshFetchWindow>)
@@ -109,6 +110,7 @@ impl GoshFetchWindow {
             UiMessage::DownloadCompleted(download) => {
                 self.imp().update_download(&download.gid, &download);
                 self.imp().add_to_completed(&download);
+                self.send_download_notification(&download);
             }
 
             UiMessage::DownloadFailed(gid, error) => {
@@ -144,6 +146,29 @@ impl GoshFetchWindow {
     fn send_engine_command(&self, cmd: EngineCommand) {
         if let Some(sender) = self.imp().cmd_sender.get() {
             let _ = sender.send_blocking(cmd);
+        }
+    }
+
+    fn send_download_notification(&self, download: &Download) {
+        // Check if notifications are enabled in settings
+        if let Some(app) = self.application() {
+            if let Some(gosh_app) = app.downcast_ref::<crate::application::GoshFetchApplication>() {
+                let settings = gosh_app.settings();
+                if !settings.enable_notifications {
+                    return;
+                }
+            }
+        }
+
+        // Send desktop notification
+        if let Err(e) = Notification::new()
+            .summary("Download Complete")
+            .body(&format!("{} has finished downloading", download.name))
+            .icon("folder-download-symbolic")
+            .appname("Gosh-Fetch")
+            .show()
+        {
+            log::warn!("Failed to show notification: {}", e);
         }
     }
 

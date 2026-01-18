@@ -8,7 +8,8 @@ use std::cell::{OnceCell, RefCell};
 use crate::dialogs::AddDownloadDialog;
 use crate::views::{CompletedView, DownloadsView, SettingsView};
 use gosh_fetch_core::{
-    format_speed, Database, Download, DownloadState, DownloadsDb, EngineCommand, GlobalStats,
+    format_speed, Database, Download, DownloadState, DownloadType, DownloadsDb, EngineCommand,
+    GlobalStats,
 };
 
 #[derive(Default)]
@@ -116,6 +117,9 @@ impl GoshFetchWindow {
 
         // Load completed downloads from database
         self.load_completed_downloads();
+
+        // Restore incomplete downloads
+        self.restore_incomplete_downloads();
     }
 
     fn load_completed_downloads(&self) {
@@ -138,6 +142,65 @@ impl GoshFetchWindow {
                 }
                 Err(e) => {
                     log::error!("Failed to load completed downloads: {}", e);
+                }
+            }
+        }
+    }
+
+    fn restore_incomplete_downloads(&self) {
+        if let Some(db) = self.db.get() {
+            match DownloadsDb::get_incomplete(db) {
+                Ok(incomplete) => {
+                    if incomplete.is_empty() {
+                        return;
+                    }
+
+                    log::info!("Restoring {} incomplete downloads", incomplete.len());
+
+                    for download in incomplete {
+                        match download.download_type {
+                            DownloadType::Http => {
+                                // Restore HTTP download using URL
+                                if let Some(url) = &download.url {
+                                    if let Some(sender) = self.cmd_sender.get() {
+                                        let _ = sender.send_blocking(EngineCommand::AddDownload {
+                                            url: url.clone(),
+                                            options: None,
+                                        });
+                                    }
+                                }
+                            }
+                            DownloadType::Magnet => {
+                                // Restore magnet download using URI
+                                if let Some(uri) = &download.magnet_uri {
+                                    if let Some(sender) = self.cmd_sender.get() {
+                                        let _ = sender.send_blocking(EngineCommand::AddMagnet {
+                                            uri: uri.clone(),
+                                            options: None,
+                                        });
+                                    }
+                                }
+                            }
+                            DownloadType::Torrent => {
+                                // Torrent files aren't stored in DB, so we can't restore them
+                                // The engine's own persistence should handle active torrents
+                                log::debug!(
+                                    "Skipping torrent restoration for {}: engine handles persistence",
+                                    download.name
+                                );
+                            }
+                            DownloadType::Ftp => {
+                                // FTP is not supported by the engine
+                                log::warn!(
+                                    "Skipping FTP download restoration for {}: not supported",
+                                    download.name
+                                );
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to restore incomplete downloads: {}", e);
                 }
             }
         }

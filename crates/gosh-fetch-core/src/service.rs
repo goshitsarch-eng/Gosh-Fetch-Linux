@@ -294,7 +294,21 @@ fn settings_to_config(settings: &Settings) -> EngineConfig {
         let _ = std::fs::create_dir_all(parent);
     }
 
-    EngineConfig {
+    // Build proxy URL if proxy is enabled
+    // Format: protocol://[user:pass@]host:port
+    let proxy_url = if settings.proxy_enabled && !settings.proxy_url.is_empty() {
+        let auth = match (&settings.proxy_user, &settings.proxy_pass) {
+            (Some(user), Some(pass)) if !user.is_empty() => {
+                format!("{}:{}@", user, pass)
+            }
+            _ => String::new(),
+        };
+        Some(format!("{}://{}{}", settings.proxy_type, auth, settings.proxy_url))
+    } else {
+        None
+    };
+
+    let mut config = EngineConfig {
         download_dir,
         max_concurrent_downloads: settings.max_concurrent_downloads as usize,
         max_connections_per_download: settings.max_connections_per_server as usize,
@@ -316,5 +330,10 @@ fn settings_to_config(settings: &Settings) -> EngineConfig {
         seed_ratio: settings.bt_seed_ratio,
         database_path: Some(database_path),
         ..Default::default()
-    }
+    };
+
+    // Set proxy URL in HTTP config
+    config.http.proxy_url = proxy_url;
+
+    config
 }

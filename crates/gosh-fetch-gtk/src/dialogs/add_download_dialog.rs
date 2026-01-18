@@ -2,6 +2,7 @@
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
+use chrono::{Local, NaiveDateTime, TimeZone};
 use gtk::{gio, glib};
 use std::cell::RefCell;
 
@@ -31,6 +32,10 @@ mod imp {
         pub checksum_value_entry: RefCell<Option<adw::EntryRow>>,
         pub sequential_switch: RefCell<Option<adw::SwitchRow>>,
         pub advanced_expanded: RefCell<bool>,
+        // Scheduling options
+        pub schedule_switch: RefCell<Option<adw::SwitchRow>>,
+        pub schedule_row: RefCell<Option<adw::ActionRow>>,
+        pub scheduled_time: RefCell<Option<i64>>,
     }
 
     #[glib::object_subclass]
@@ -172,7 +177,7 @@ impl AddDownloadDialog {
         *self.imp().url_entry.borrow_mut() = Some(entry.clone());
         page.append(&entry);
 
-        let help = gtk::Label::new(Some("Supports HTTP, HTTPS, FTP, and magnet links"));
+        let help = gtk::Label::new(Some("Supports HTTP, HTTPS, and magnet links"));
         help.set_halign(gtk::Align::Start);
         help.add_css_class("dim-label");
         help.add_css_class("caption");
@@ -297,6 +302,38 @@ impl AddDownloadDialog {
         priority_row.set_selected(0);
         *self.imp().priority_row.borrow_mut() = Some(priority_row.clone());
         group.add(&priority_row);
+
+        // Schedule download switch
+        let schedule_switch = adw::SwitchRow::new();
+        schedule_switch.set_title("Schedule Download");
+        schedule_switch.set_subtitle("Start download at a specific time");
+        schedule_switch.set_active(false);
+        *self.imp().schedule_switch.borrow_mut() = Some(schedule_switch.clone());
+        group.add(&schedule_switch);
+
+        // Schedule time row (hidden by default)
+        let schedule_row = adw::ActionRow::new();
+        schedule_row.set_title("Scheduled Time");
+        schedule_row.set_subtitle("Not set");
+        schedule_row.set_visible(false);
+
+        let time_btn = gtk::Button::with_label("Set Time");
+        time_btn.set_valign(gtk::Align::Center);
+        let dialog_weak = self.downgrade();
+        time_btn.connect_clicked(move |_| {
+            if let Some(dialog) = dialog_weak.upgrade() {
+                dialog.show_time_picker();
+            }
+        });
+        schedule_row.add_suffix(&time_btn);
+        *self.imp().schedule_row.borrow_mut() = Some(schedule_row.clone());
+        group.add(&schedule_row);
+
+        // Connect switch to show/hide time row
+        let schedule_row_ref = schedule_row.clone();
+        schedule_switch.connect_active_notify(move |switch| {
+            schedule_row_ref.set_visible(switch.is_active());
+        });
 
         // HTTP Options section
         let http_group = adw::PreferencesGroup::new();
@@ -426,6 +463,95 @@ impl AddDownloadDialog {
         );
     }
 
+    fn show_time_picker(&self) {
+        // Create a popover with date/time selection
+        let popover = gtk::Popover::new();
+
+        let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        content.set_margin_start(12);
+        content.set_margin_end(12);
+        content.set_margin_top(12);
+        content.set_margin_bottom(12);
+
+        let title = gtk::Label::new(Some("Select Date and Time"));
+        title.add_css_class("title-4");
+        content.append(&title);
+
+        // Calendar for date selection
+        let calendar = gtk::Calendar::new();
+        content.append(&calendar);
+
+        // Time selection
+        let time_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        time_box.set_halign(gtk::Align::Center);
+
+        let now = Local::now();
+
+        let hour_spin = gtk::SpinButton::with_range(0.0, 23.0, 1.0);
+        hour_spin.set_value(now.format("%H").to_string().parse::<f64>().unwrap_or(12.0));
+        hour_spin.set_wrap(true);
+        hour_spin.set_width_chars(2);
+
+        let minute_spin = gtk::SpinButton::with_range(0.0, 59.0, 1.0);
+        minute_spin.set_value(now.format("%M").to_string().parse::<f64>().unwrap_or(0.0));
+        minute_spin.set_wrap(true);
+        minute_spin.set_width_chars(2);
+
+        time_box.append(&hour_spin);
+        time_box.append(&gtk::Label::new(Some(":")));
+        time_box.append(&minute_spin);
+        content.append(&time_box);
+
+        // Confirm button
+        let confirm_btn = gtk::Button::with_label("Set");
+        confirm_btn.add_css_class("suggested-action");
+        content.append(&confirm_btn);
+
+        popover.set_child(Some(&content));
+
+        // Connect confirm button
+        let dialog_weak = self.downgrade();
+        let popover_weak = popover.downgrade();
+        confirm_btn.connect_clicked(move |_| {
+            if let (Some(dialog), Some(popover)) = (dialog_weak.upgrade(), popover_weak.upgrade()) {
+                let date = calendar.date();
+                let hour = hour_spin.value() as u32;
+                let minute = minute_spin.value() as u32;
+
+                // Create datetime from selected values
+                let datetime_str = format!(
+                    "{:04}-{:02}-{:02} {:02}:{:02}:00",
+                    date.year(),
+                    date.month() as u32,
+                    date.day_of_month(),
+                    hour,
+                    minute
+                );
+
+                if let Ok(naive) = NaiveDateTime::parse_from_str(&datetime_str, "%Y-%m-%d %H:%M:%S")
+                {
+                    if let Some(local) = Local.from_local_datetime(&naive).single() {
+                        let timestamp = local.timestamp();
+                        *dialog.imp().scheduled_time.borrow_mut() = Some(timestamp);
+
+                        // Update the row subtitle
+                        if let Some(row) = dialog.imp().schedule_row.borrow().as_ref() {
+                            row.set_subtitle(&local.format("%Y-%m-%d %H:%M").to_string());
+                        }
+                    }
+                }
+
+                popover.popdown();
+            }
+        });
+
+        // Show the popover relative to the schedule row
+        if let Some(row) = self.imp().schedule_row.borrow().as_ref() {
+            popover.set_parent(row);
+            popover.popup();
+        }
+    }
+
     fn build_options(&self) -> Option<DownloadOptions> {
         let imp = self.imp();
         let mut opts = DownloadOptions::default();
@@ -513,6 +639,16 @@ impl AddDownloadDialog {
             if switch.is_active() {
                 opts.sequential = Some(true);
                 has_options = true;
+            }
+        }
+
+        // Scheduled start time
+        if let Some(switch) = imp.schedule_switch.borrow().as_ref() {
+            if switch.is_active() {
+                if let Some(timestamp) = *imp.scheduled_time.borrow() {
+                    opts.scheduled_start = Some(timestamp);
+                    has_options = true;
+                }
             }
         }
 
