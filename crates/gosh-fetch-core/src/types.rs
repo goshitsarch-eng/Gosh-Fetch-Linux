@@ -27,6 +27,22 @@ pub struct DownloadOptions {
     pub max_download_limit: Option<String>,
     /// Max upload speed
     pub max_upload_limit: Option<String>,
+    /// Checksum type for verification ("md5" or "sha256")
+    pub checksum_type: Option<String>,
+    /// Checksum value to verify against
+    pub checksum_value: Option<String>,
+    /// Mirror URLs for fallback
+    pub mirror_urls: Option<Vec<String>>,
+    /// Download priority ("critical", "high", "normal", "low")
+    pub priority: Option<String>,
+    /// Cookies to include with request
+    pub cookies: Option<String>,
+    /// Unix timestamp for scheduled start
+    pub scheduled_start: Option<i64>,
+    /// Enable sequential download mode (for torrents)
+    pub sequential: Option<bool>,
+    /// File preallocation mode ("none", "sparse", "full")
+    pub preallocation: Option<String>,
 }
 
 /// Global download statistics
@@ -208,6 +224,16 @@ pub struct Settings {
     pub bt_seed_ratio: f64,
     pub auto_update_trackers: bool,
     pub delete_files_on_remove: bool,
+    // Proxy settings
+    pub proxy_enabled: bool,
+    pub proxy_type: String, // "http", "https", "socks5"
+    pub proxy_url: String,
+    pub proxy_user: Option<String>,
+    pub proxy_pass: Option<String>,
+    // Connection settings
+    pub min_segment_size: u32, // in KB
+    // BitTorrent advanced settings
+    pub bt_preallocation: String, // "none", "sparse", "full"
 }
 
 impl Default for Settings {
@@ -234,6 +260,13 @@ impl Default for Settings {
             bt_seed_ratio: 1.0,
             auto_update_trackers: true,
             delete_files_on_remove: false,
+            proxy_enabled: false,
+            proxy_type: "http".to_string(),
+            proxy_url: String::new(),
+            proxy_user: None,
+            proxy_pass: None,
+            min_segment_size: 1024, // 1 MB default
+            bt_preallocation: "sparse".to_string(),
         }
     }
 }

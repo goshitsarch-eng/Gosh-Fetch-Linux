@@ -19,9 +19,11 @@ mod imp {
         pub window: RefCell<Option<GoshFetchWindow>>,
         pub list_box: RefCell<Option<gtk::ListBox>>,
         pub rows: RefCell<HashMap<String, DownloadRow>>,
+        pub row_statuses: RefCell<HashMap<String, DownloadState>>,
         pub empty_state: RefCell<Option<adw::StatusPage>>,
         pub header_stats: RefCell<Option<gtk::Label>>,
         pub filter: RefCell<Option<String>>,
+        pub filter_buttons: RefCell<Vec<gtk::ToggleButton>>,
     }
 
     #[glib::object_subclass]
@@ -107,20 +109,41 @@ impl DownloadsView {
             ("Errors", Some("error")),
         ];
 
+        let mut buttons = Vec::new();
         for (label, filter) in filters {
             let btn = gtk::ToggleButton::with_label(label);
             if filter.is_none() {
                 btn.set_active(true);
             }
+            buttons.push(btn.clone());
+            filter_box.append(&btn);
+        }
+
+        // Store buttons and connect signals after all are created
+        *self.imp().filter_buttons.borrow_mut() = buttons.clone();
+
+        for (i, btn) in buttons.iter().enumerate() {
             let view = self.clone();
-            let filter = filter.map(String::from);
+            let filter = filters[i].1.map(String::from);
+            let all_buttons = buttons.clone();
             btn.connect_toggled(move |btn| {
                 if btn.is_active() {
+                    // Deactivate other buttons (mutually exclusive)
+                    for other_btn in &all_buttons {
+                        if other_btn != btn && other_btn.is_active() {
+                            other_btn.set_active(false);
+                        }
+                    }
                     *view.imp().filter.borrow_mut() = filter.clone();
                     view.apply_filter();
+                } else {
+                    // Prevent deselecting the only active button
+                    let any_active = all_buttons.iter().any(|b| b.is_active());
+                    if !any_active {
+                        btn.set_active(true);
+                    }
                 }
             });
-            filter_box.append(&btn);
         }
 
         self.append(&filter_box);
@@ -211,9 +234,14 @@ impl DownloadsView {
             list_box.append(&row);
         }
 
+        // Store status for filtering
+        imp.row_statuses
+            .borrow_mut()
+            .insert(download.gid.clone(), download.status);
         imp.rows.borrow_mut().insert(download.gid.clone(), row);
         self.update_empty_state();
         self.update_stats();
+        self.apply_filter();
     }
 
     pub fn update_download(&self, gid: &str, download: &Download) {
@@ -224,7 +252,13 @@ impl DownloadsView {
             row.bind(&obj);
         }
 
+        // Update status for filtering
+        imp.row_statuses
+            .borrow_mut()
+            .insert(gid.to_string(), download.status);
+
         self.update_stats();
+        self.apply_filter();
     }
 
     pub fn remove_download(&self, gid: &str) {
@@ -238,6 +272,8 @@ impl DownloadsView {
                 }
             }
         }
+
+        imp.row_statuses.borrow_mut().remove(gid);
 
         self.update_empty_state();
         self.update_stats();
@@ -253,6 +289,7 @@ impl DownloadsView {
             }
         }
         imp.rows.borrow_mut().clear();
+        imp.row_statuses.borrow_mut().clear();
 
         // Add new downloads (excluding completed)
         for download in downloads {
@@ -263,6 +300,7 @@ impl DownloadsView {
 
         self.update_empty_state();
         self.update_stats();
+        self.apply_filter();
     }
 
     fn update_empty_state(&self) {
@@ -292,23 +330,43 @@ impl DownloadsView {
     fn apply_filter(&self) {
         let imp = self.imp();
         let filter = imp.filter.borrow().clone();
+        let statuses = imp.row_statuses.borrow().clone();
 
         if let Some(list_box) = imp.list_box.borrow().as_ref() {
             list_box.set_filter_func(move |row| {
-                if filter.is_none() {
-                    return true;
-                }
+                // No filter means show all
+                let filter_str = match &filter {
+                    None => return true,
+                    Some(f) => f.as_str(),
+                };
 
-                if let Some(download_row) = row
+                // Get the download row and its gid
+                let download_row = match row
                     .first_child()
                     .and_then(|w| w.downcast::<DownloadRow>().ok())
                 {
-                    if download_row.gid().is_some() {
-                        // TODO: Get actual status and filter
-                        return true;
-                    }
+                    Some(r) => r,
+                    None => return true,
+                };
+
+                let gid = match download_row.gid() {
+                    Some(g) => g,
+                    None => return true,
+                };
+
+                // Get the status for this download
+                let status = match statuses.get(&gid) {
+                    Some(s) => *s,
+                    None => return true,
+                };
+
+                // Filter based on status
+                match filter_str {
+                    "active" => matches!(status, DownloadState::Active | DownloadState::Waiting),
+                    "paused" => status == DownloadState::Paused,
+                    "error" => status == DownloadState::Error,
+                    _ => true,
                 }
-                true
             });
         }
     }

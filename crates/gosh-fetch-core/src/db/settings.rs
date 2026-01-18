@@ -81,6 +81,17 @@ impl SettingsDb {
                     "delete_files_on_remove" => {
                         settings.delete_files_on_remove = value == "true";
                     }
+                    "proxy_enabled" => {
+                        settings.proxy_enabled = value == "true";
+                    }
+                    "proxy_type" => settings.proxy_type = value,
+                    "proxy_url" => settings.proxy_url = value,
+                    "proxy_user" => settings.proxy_user = Some(value).filter(|s| !s.is_empty()),
+                    "proxy_pass" => settings.proxy_pass = Some(value).filter(|s| !s.is_empty()),
+                    "min_segment_size" => {
+                        settings.min_segment_size = value.parse().unwrap_or(1024);
+                    }
+                    "bt_preallocation" => settings.bt_preallocation = value,
                     _ => {}
                 }
             }
@@ -120,6 +131,17 @@ impl SettingsDb {
         Self::set(db, "bt_seed_ratio", &settings.bt_seed_ratio.to_string())?;
         Self::set(db, "auto_update_trackers", if settings.auto_update_trackers { "true" } else { "false" })?;
         Self::set(db, "delete_files_on_remove", if settings.delete_files_on_remove { "true" } else { "false" })?;
+        Self::set(db, "proxy_enabled", if settings.proxy_enabled { "true" } else { "false" })?;
+        Self::set(db, "proxy_type", &settings.proxy_type)?;
+        Self::set(db, "proxy_url", &settings.proxy_url)?;
+        if let Some(ref user) = settings.proxy_user {
+            Self::set(db, "proxy_user", user)?;
+        }
+        if let Some(ref pass) = settings.proxy_pass {
+            Self::set(db, "proxy_pass", pass)?;
+        }
+        Self::set(db, "min_segment_size", &settings.min_segment_size.to_string())?;
+        Self::set(db, "bt_preallocation", &settings.bt_preallocation)?;
         Ok(())
     }
 

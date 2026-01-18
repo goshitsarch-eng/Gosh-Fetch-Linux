@@ -173,6 +173,13 @@ impl GoshFetchWindow {
         });
     }
 
+    pub fn add_url_with_options(&self, url: &str, options: Option<gosh_fetch_core::DownloadOptions>) {
+        self.send_engine_command(EngineCommand::AddDownload {
+            url: url.to_string(),
+            options,
+        });
+    }
+
     pub fn add_magnet(&self, uri: &str) {
         self.send_engine_command(EngineCommand::AddMagnet {
             uri: uri.to_string(),
@@ -180,10 +187,24 @@ impl GoshFetchWindow {
         });
     }
 
+    pub fn add_magnet_with_options(&self, uri: &str, options: Option<gosh_fetch_core::DownloadOptions>) {
+        self.send_engine_command(EngineCommand::AddMagnet {
+            uri: uri.to_string(),
+            options,
+        });
+    }
+
     pub fn add_torrent(&self, data: &[u8]) {
         self.send_engine_command(EngineCommand::AddTorrent {
             data: data.to_vec(),
             options: None,
+        });
+    }
+
+    pub fn add_torrent_with_options(&self, data: &[u8], options: Option<gosh_fetch_core::DownloadOptions>) {
+        self.send_engine_command(EngineCommand::AddTorrent {
+            data: data.to_vec(),
+            options,
         });
     }
 }

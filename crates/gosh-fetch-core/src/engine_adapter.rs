@@ -247,12 +247,39 @@ fn convert_options(opts: FrontendOptions) -> DownloadOptions {
         }
     }
 
+    // Convert cookies to Vec<String> format
+    let cookies = opts.cookies.map(|c| {
+        c.split(';')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    });
+
+    // Build checksum if provided
+    let checksum = opts.checksum_type.zip(opts.checksum_value).and_then(|(t, v)| {
+        use gosh_dl::http::ExpectedChecksum;
+        match t.to_lowercase().as_str() {
+            "md5" => Some(ExpectedChecksum::md5(v)),
+            "sha256" => Some(ExpectedChecksum::sha256(v)),
+            _ => None,
+        }
+    });
+
+    // Convert priority string to enum
+    let priority = opts.priority
+        .and_then(|p| p.parse::<gosh_dl::DownloadPriority>().ok())
+        .unwrap_or_default();
+
     DownloadOptions {
         save_dir: opts.dir.map(PathBuf::from),
         filename: opts.out,
         user_agent: opts.user_agent,
         referer: opts.referer,
         headers,
+        cookies,
+        checksum,
+        mirrors: opts.mirror_urls.unwrap_or_default(),
+        priority,
         max_connections: opts
             .max_connection_per_server
             .and_then(|s| s.parse().ok()),
@@ -264,7 +291,7 @@ fn convert_options(opts: FrontendOptions) -> DownloadOptions {
                 .filter_map(|n| n.parse().ok())
                 .collect()
         }),
-        ..Default::default()
+        sequential: opts.sequential,
     }
 }
 
