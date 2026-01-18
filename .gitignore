@@ -56,3 +56,4 @@ tarpaulin-report.html
 # Backup files
 *.bak
 *.orig
+docs/AUDIT_REPORT.md

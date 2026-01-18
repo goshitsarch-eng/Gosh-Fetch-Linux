@@ -12,10 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Architecture
 - Complete rewrite from Tauri/Svelte to pure Rust with native toolkit frontends
 - New workspace structure with shared core library (`gosh-fetch-core`)
-- Multiple frontend support: GTK4/libadwaita, COSMIC, Qt6/QML
+- GTK4/libadwaita frontend (`gosh-fetch-gtk`)
 
 #### Core Library (gosh-fetch-core)
-- UI-agnostic business logic shared across all frontends
+- UI-agnostic business logic shared across frontends
 - `DownloadService` bridges tokio async runtime with UI main loops
 - `EngineAdapter` provides unified gosh-dl integration
 - SQLite database layer with rusqlite
@@ -27,16 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time download monitoring with 1-second polling
 - System tray support via ksni
 - Keyboard shortcuts (Ctrl+N for new download, etc.)
-
-#### COSMIC Frontend (gosh-fetch-cosmic)
-- Native System76 COSMIC desktop support
-- Implements `cosmic::Application` trait
-- Navigation bar with context drawer
-
-#### Qt6 Frontend (gosh-fetch-qt)
-- Native Qt desktop support via cxx-qt
-- QML-based declarative UI
-- Full feature parity with GTK frontend
 
 ### Removed
 - Tauri v2 framework

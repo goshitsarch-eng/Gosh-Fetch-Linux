@@ -1,6 +1,6 @@
 # Gosh Fetch
 
-A native Linux download manager built entirely in Rust. Gosh Fetch handles both HTTP/HTTPS downloads and BitTorrent with a clean, straightforward interface. Choose from GTK4, COSMIC, or Qt frontends depending on your desktop environment.
+A native Linux download manager built entirely in Rust. Gosh Fetch handles both HTTP/HTTPS downloads and BitTorrent with a clean GTK4/libadwaita interface.
 
 ## Philosophy
 
@@ -24,9 +24,9 @@ The engine handles HTTP/HTTPS with segmented downloads and automatic resume, plu
 
 ## Requirements
 
-You'll need [Rust](https://rustup.rs/) 1.77 or newer for all frontends.
+You'll need [Rust](https://rustup.rs/) 1.77 or newer.
 
-**GTK4 frontend** requires GTK4 4.14+ and libadwaita 1.5+. Install the development packages for your distro:
+The GTK4 frontend requires GTK4 4.14+ and libadwaita 1.5+. Install the development packages for your distro:
 
 ```bash
 # Debian/Ubuntu
@@ -39,39 +39,37 @@ sudo dnf install gtk4-devel libadwaita-devel
 sudo pacman -S gtk4 libadwaita
 ```
 
-**COSMIC frontend** requires libcosmic from System76.
-
-**Qt6 frontend** requires Qt6 with QtQuick, QtQuickControls2, and cmake. See [Qt Frontend Documentation](docs/QT_FRONTEND.md) for details.
-
 ## Building
 
-The default build uses the GTK4 frontend. Run `cargo build` for development or `cargo build --release` for production. Use `cargo run` to launch, `cargo test` for tests, `cargo clippy` for linting, and `cargo fmt` for formatting.
-
-To build a specific frontend:
+Run `cargo build` for development or `cargo build --release` for production. Use `cargo run` to launch, `cargo test` for tests, `cargo clippy` for linting, and `cargo fmt` for formatting.
 
 ```bash
-cargo build -p gosh-fetch-gtk --release     # GTK4 (default)
-cargo build -p gosh-fetch-cosmic --release  # COSMIC
-cargo build -p gosh-fetch-qt --release      # Qt6
+cargo build --release
+cargo run
 ```
-
-Run any frontend with `cargo run -p <package-name>`.
 
 ## Usage
 
 Click the + button to add a download. Enter a URL, paste a magnet link, or select a torrent file. The download list updates in real time showing speed, progress, and ETA. Pause, resume, or remove downloads individually or use batch operations. Completed downloads appear in your history where you can open files directly.
 
+Keyboard shortcuts: Ctrl+N for new download, Ctrl+Shift+P to pause all, Ctrl+Shift+R to resume all, Ctrl+Q to quit.
+
 ## Troubleshooting
 
 If a download stalls, it has no active connections. Check your network and try resuming. Connection failures usually mean the server is unreachable or the URL is wrong. Torrents with no seeds have no peers to download from and may be inactive.
 
+For debug logging:
+```bash
+RUST_LOG=debug cargo run
+```
+
 ## Privacy
 
-Gosh Fetch collects nothing. No telemetry, no analytics, no phoning home. The app only makes network requests when you explicitly start a download. Everything stays on your machine.
+Gosh Fetch collects nothing. No telemetry, no analytics, no phoning home. The app only makes network requests when you explicitly start a download (and for BitTorrent DHT/tracker operations if enabled). Everything stays on your machine.
 
 ## Architecture
 
-The project is a Rust workspace. The `gosh-fetch-core` crate contains shared logic that's UI agnostic. Each frontend (GTK4, COSMIC, Qt6) lives in its own crate under `crates/`. Database migrations for SQLite are in the `migrations/` directory. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical breakdown.
+The project is a Rust workspace with two crates. The `gosh-fetch-core` crate contains shared logic that's UI-agnostic. The `gosh-fetch-gtk` crate provides the GTK4/libadwaita frontend. Database migrations for SQLite are in the `migrations/` directory. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical breakdown.
 
 ## License
 
@@ -85,4 +83,4 @@ Future plans include a browser extension for one-click downloads, scheduled down
 
 ## Contributing
 
-Contributions are welcome. Open an issue first for major changes.
+Contributions are welcome. Open an issue first for major changes. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.

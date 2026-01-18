@@ -4,14 +4,14 @@ This document describes the technical architecture of Gosh-Fetch.
 
 ## Overview
 
-Gosh-Fetch is a Linux download manager built as a Rust workspace with multiple native frontends:
+Gosh-Fetch is a Linux download manager built as a Rust workspace:
 
 - **Core Library**: gosh-fetch-core (UI-agnostic business logic)
 - **GTK Frontend**: gosh-fetch-gtk (GTK4/libadwaita)
-- **COSMIC Frontend**: gosh-fetch-cosmic (System76 COSMIC desktop)
-- **Qt Frontend**: gosh-fetch-qt (Qt6/QML via cxx-qt)
 - **Download Engine**: gosh-dl (native Rust library)
 - **Database**: SQLite with rusqlite
+
+The architecture supports multiple frontends through the shared core library, though currently only the GTK frontend is implemented.
 
 ## Technology Stack
 
@@ -19,8 +19,6 @@ Gosh-Fetch is a Linux download manager built as a Rust workspace with multiple n
 |-------|------------|---------|
 | Core Library | Rust | Shared business logic |
 | GTK Frontend | GTK4 + libadwaita | GNOME desktop integration |
-| COSMIC Frontend | libcosmic | Pop!_OS/COSMIC desktop |
-| Qt Frontend | Qt6 + QML + cxx-qt | KDE/Qt desktop integration |
 | Download Engine | gosh-dl | HTTP/BitTorrent handling |
 | Database | SQLite (rusqlite) | Local data persistence |
 | Async Runtime | Tokio | Concurrent download operations |
@@ -45,38 +43,29 @@ Gosh-Fetch-Linux/
 │   │   │       └── settings.rs   # Settings/Trackers operations
 │   │   └── Cargo.toml
 │   │
-│   ├── gosh-fetch-gtk/           # GTK4/libadwaita frontend
-│   │   ├── src/
-│   │   │   ├── main.rs           # Application entry point
-│   │   │   ├── application.rs    # GtkApplication subclass
-│   │   │   ├── window/           # Main window implementation
-│   │   │   ├── views/            # Page views (Downloads, Completed, Settings)
-│   │   │   ├── widgets/          # Reusable widgets (DownloadRow)
-│   │   │   ├── dialogs/          # Modal dialogs (AddDownloadDialog)
-│   │   │   ├── models/           # GObject wrappers (DownloadObject)
-│   │   │   └── tray/             # System tray (ksni)
-│   │   ├── resources/            # GResource files (UI, CSS, icons)
-│   │   └── Cargo.toml
-│   │
-│   ├── gosh-fetch-cosmic/        # COSMIC desktop frontend
-│   │   ├── src/
-│   │   │   ├── main.rs           # Application entry point
-│   │   │   └── app.rs            # cosmic::Application implementation
-│   │   └── Cargo.toml
-│   │
-│   └── gosh-fetch-qt/            # Qt6/QML frontend
+│   └── gosh-fetch-gtk/           # GTK4/libadwaita frontend
 │       ├── src/
 │       │   ├── main.rs           # Application entry point
-│       │   └── bridge.rs         # Rust/Qt bridge (cxx-qt)
-│       ├── qml/                  # QML UI files
-│       │   ├── main.qml
-│       │   ├── DownloadsPage.qml
-│       │   ├── CompletedPage.qml
-│       │   └── SettingsPage.qml
+│       │   ├── application.rs    # AdwApplication subclass
+│       │   ├── window/           # Main window implementation
+│       │   ├── views/            # Page views (Downloads, Completed, Settings)
+│       │   ├── widgets/          # Reusable widgets (DownloadRow)
+│       │   ├── dialogs/          # Modal dialogs (AddDownloadDialog, TorrentPreviewDialog)
+│       │   ├── models/           # GObject wrappers (DownloadObject)
+│       │   └── tray/             # System tray (ksni)
+│       ├── resources/            # GResource files (UI, CSS, icons)
+│       │   ├── resources.gresource.xml
+│       │   └── ui/               # UI definition files and CSS
+│       ├── build.rs              # Compiles GResource files
 │       └── Cargo.toml
 │
 ├── migrations/
 │   └── 001_initial.sql           # Database schema
+│
+├── packaging/                    # Distribution packaging
+│   ├── appimage/
+│   ├── deb/
+│   └── rpm/
 │
 ├── Cargo.toml                    # Workspace configuration
 └── docs/                         # Documentation
@@ -86,7 +75,7 @@ Gosh-Fetch-Linux/
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Frontend (GTK / COSMIC / Qt)                  │
+│                    GTK4/libadwaita Frontend                      │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐ │
 │  │   Views     │ ←→ │   State     │ ←→ │  Command Channel    │ │
 │  │ (Downloads, │    │ (Downloads, │    │  (async_channel)    │ │
@@ -123,7 +112,7 @@ Gosh-Fetch-Linux/
 
 ### Core Library (gosh-fetch-core)
 
-The core library provides UI-agnostic functionality that all frontends share.
+The core library provides UI-agnostic functionality.
 
 #### DownloadService (service.rs)
 
@@ -206,23 +195,10 @@ Main application window with:
 - **CompletedView**: Download history from database
 - **SettingsView**: All configuration options organized in preference groups
 
-### COSMIC Frontend (gosh-fetch-cosmic)
+#### Dialogs
 
-Native frontend for System76's COSMIC desktop using libcosmic.
-
-Implements `cosmic::Application` trait with:
-- Navigation bar for page switching
-- Context drawer for about dialog
-- Subscription-based UI updates
-- Full settings management
-
-### Qt Frontend (gosh-fetch-qt)
-
-Native Qt6 experience using QML and cxx-qt for Rust interop.
-
-- QML files define the UI
-- `bridge.rs` provides Rust/Qt communication
-- Same command/message pattern as other frontends
+- **AddDownloadDialog**: Add URL, magnet, or torrent file with options
+- **TorrentPreviewDialog**: Preview torrent contents before adding
 
 ## Database Schema
 
@@ -313,9 +289,9 @@ Key characteristics:
 
 ## Communication Pattern
 
-All frontends use the same architecture:
+The frontend uses a two-thread architecture:
 
-1. **UI Thread**: Runs the native toolkit event loop (GTK main loop, Qt event loop, etc.)
+1. **UI Thread**: Runs the GTK main loop
 2. **Background Thread**: Runs tokio runtime with DownloadService
 3. **async_channel**: Bidirectional communication between threads
    - `Sender<EngineCommand>`: UI sends commands to engine
@@ -323,10 +299,19 @@ All frontends use the same architecture:
 
 The UI polls for updates (1-second interval) by sending `RefreshDownloads` and `RefreshStats` commands.
 
+## File Locations
+
+| Path | Purpose |
+|------|---------|
+| ~/.local/share/io.github.gosh.Fetch/gosh-fetch.db | Application database |
+| ~/.local/share/io.github.gosh.Fetch/engine.db | Engine session data |
+| ~/Downloads (default) | Downloaded files |
+
 ## Security Considerations
 
 - All data stored locally (no cloud services)
 - No telemetry or analytics
-- SQLite database in `~/.local/share/io.github.gosh.Fetch/`
-- Settings stored per-user
-- Engine database stored separately for session persistence
+- Network requests only for:
+  - User-initiated downloads
+  - BitTorrent DHT/PEX/LPD (if enabled)
+  - Tracker list updates (if enabled)

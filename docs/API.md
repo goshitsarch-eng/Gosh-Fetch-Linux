@@ -1,6 +1,6 @@
 # Gosh-Fetch Core API Reference
 
-This document describes the public API of the `gosh-fetch-core` crate, which provides the shared functionality for all Gosh-Fetch frontends.
+This document describes the public API of the `gosh-fetch-core` crate, which provides the shared functionality for the Gosh-Fetch download manager.
 
 ## Table of Contents
 
@@ -383,11 +383,19 @@ pub struct DownloadOptions {
     pub max_connection_per_server: Option<String>, // Connections per server
     pub user_agent: Option<String>,             // HTTP user agent
     pub referer: Option<String>,                // HTTP referer
-    pub header: Option<Vec<String>>,            // Custom headers
-    pub select_file: Option<String>,            // Torrent file indices
+    pub header: Option<Vec<String>>,            // Custom headers ("Key: Value" format)
+    pub select_file: Option<String>,            // Torrent file indices (comma-separated)
     pub seed_ratio: Option<String>,             // Seed ratio
-    pub max_download_limit: Option<String>,     // Download speed limit
+    pub max_download_limit: Option<String>,     // Download speed limit (e.g., "1M", "500K")
     pub max_upload_limit: Option<String>,       // Upload speed limit
+    pub checksum_type: Option<String>,          // "md5" or "sha256"
+    pub checksum_value: Option<String>,         // Expected checksum
+    pub mirror_urls: Option<Vec<String>>,       // Fallback URLs
+    pub priority: Option<String>,               // "critical", "high", "normal", "low"
+    pub cookies: Option<String>,                // Cookies (semicolon-separated)
+    pub scheduled_start: Option<i64>,           // Unix timestamp for scheduled start
+    pub sequential: Option<bool>,               // Sequential download mode (torrents)
+    pub preallocation: Option<String>,          // "none", "sparse", "full"
 }
 ```
 
@@ -423,6 +431,16 @@ pub struct Settings {
     pub bt_seed_ratio: f64,
     pub auto_update_trackers: bool,
     pub delete_files_on_remove: bool,
+    // Proxy settings
+    pub proxy_enabled: bool,
+    pub proxy_type: String,        // "http", "https", "socks5"
+    pub proxy_url: String,
+    pub proxy_user: Option<String>,
+    pub proxy_pass: Option<String>,
+    // Connection settings
+    pub min_segment_size: u32,     // in KB
+    // BitTorrent advanced settings
+    pub bt_preallocation: String,  // "none", "sparse", "full"
 }
 ```
 
@@ -456,6 +474,33 @@ pub struct MagnetInfo {
 }
 ```
 
+### TorrentFileInfo
+
+Used by EngineAdapter for torrent file status:
+
+```rust
+pub struct TorrentFileInfo {
+    pub path: PathBuf,
+    pub size: u64,
+    pub completed: u64,
+    pub selected: bool,
+}
+```
+
+### PeerInfo
+
+Used by EngineAdapter for peer status:
+
+```rust
+pub struct PeerInfo {
+    pub ip: String,
+    pub port: u16,
+    pub client: Option<String>,
+    pub download_speed: u64,
+    pub upload_speed: u64,
+}
+```
+
 ---
 
 ## Utilities
@@ -474,7 +519,7 @@ format_speed(500_000);    // "488.28 KB/s"
 // Format ETA
 format_eta(3600, 100);    // "36s"
 
-// Calculate progress percentage
+// Calculate progress percentage (0.0 to 1.0)
 calculate_progress(750, 1000);  // 0.75
 ```
 
@@ -497,6 +542,8 @@ let trackers = updater.get_trackers();
 updater.set_trackers(vec!["udp://tracker.example.com:1234".to_string()]);
 ```
 
+Tracker list fetched from: `https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_best.txt`
+
 ### User Agent Presets
 
 ```rust
@@ -506,8 +553,11 @@ let presets = get_user_agent_presets();
 // Returns Vec<(&str, &str)> of (name, user_agent) tuples:
 // - ("gosh-dl/0.1.0", "gosh-dl/0.1.0")
 // - ("Chrome (Windows)", "Mozilla/5.0 ...")
+// - ("Chrome (macOS)", "Mozilla/5.0 ...")
+// - ("Firefox (Windows)", "Mozilla/5.0 ...")
 // - ("Firefox (Linux)", "Mozilla/5.0 ...")
-// - etc.
+// - ("Wget", "Wget/1.21")
+// - ("Curl", "curl/8.4.0")
 ```
 
 ---

@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Gosh-Fetch! This document provide
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) 1.77+
-- Platform-specific dependencies (see README.md)
+- GTK4 4.14+ and libadwaita 1.5+ development libraries
 
 ### Getting Started
 
@@ -17,12 +17,17 @@ git clone https://github.com/YOUR_USERNAME/Gosh-Fetch-linux.git
 cd Gosh-Fetch-linux
 ```
 
-2. Build the project:
+2. Install dependencies (Debian/Ubuntu example):
+```bash
+sudo apt install libgtk-4-dev libadwaita-1-dev
+```
+
+3. Build the project:
 ```bash
 cargo build
 ```
 
-3. Run the GTK frontend (default):
+4. Run the application:
 ```bash
 cargo run
 ```
@@ -35,8 +40,6 @@ cargo run
 | `cargo build --release` | Build all crates (production) |
 | `cargo run` | Run the GTK frontend |
 | `cargo run -p gosh-fetch-gtk` | Run GTK frontend explicitly |
-| `cargo run -p gosh-fetch-cosmic` | Run COSMIC frontend |
-| `cargo run -p gosh-fetch-qt` | Run Qt frontend |
 | `cargo test` | Run all tests |
 | `cargo clippy` | Run Clippy linter |
 | `cargo fmt` | Format code |
@@ -55,25 +58,14 @@ Gosh-Fetch-linux/
 │   │   │   └── utils.rs     # Utilities
 │   │   └── Cargo.toml
 │   │
-│   ├── gosh-fetch-gtk/      # GTK4/libadwaita frontend
-│   │   ├── src/
-│   │   │   ├── window/      # Main window
-│   │   │   ├── views/       # Page views
-│   │   │   ├── widgets/     # Reusable widgets
-│   │   │   ├── dialogs/     # Modal dialogs
-│   │   │   └── tray/        # System tray
-│   │   ├── resources/       # GResource files
-│   │   └── Cargo.toml
-│   │
-│   ├── gosh-fetch-cosmic/   # COSMIC desktop frontend
-│   │   ├── src/
-│   │   │   └── app.rs       # cosmic::Application impl
-│   │   └── Cargo.toml
-│   │
-│   └── gosh-fetch-qt/       # Qt6/QML frontend
+│   └── gosh-fetch-gtk/      # GTK4/libadwaita frontend
 │       ├── src/
-│       │   └── bridge.rs    # Rust/Qt bridge
-│       ├── qml/             # QML UI files
+│       │   ├── window/      # Main window
+│       │   ├── views/       # Page views
+│       │   ├── widgets/     # Reusable widgets
+│       │   ├── dialogs/     # Modal dialogs
+│       │   └── tray/        # System tray
+│       ├── resources/       # GResource files
 │       └── Cargo.toml
 │
 ├── migrations/              # SQLite database schema
@@ -91,13 +83,21 @@ Gosh-Fetch-linux/
 
 ### Commit Message Guidelines
 
-Use prefixes to categorize commits:
-- `Add:` New features
-- `Fix:` Bug fixes
-- `Update:` Enhancements to existing features
-- `Refactor:` Code restructuring
-- `Docs:` Documentation changes
-- `Chore:` Maintenance tasks
+Use conventional commit prefixes:
+- `feat:` New features
+- `fix:` Bug fixes
+- `refactor:` Code restructuring
+- `docs:` Documentation changes
+- `chore:` Maintenance tasks
+- `test:` Adding or updating tests
+
+Examples:
+```
+feat: Add download scheduling option
+fix: Handle network timeout during magnet resolution
+refactor: Extract download row widget to separate module
+docs: Update installation instructions for Fedora
+```
 
 ## Pull Request Process
 
@@ -117,7 +117,7 @@ cargo test
 
 4. Commit with a descriptive message:
 ```bash
-git commit -m "Add: brief description of changes"
+git commit -m "feat: brief description of changes"
 ```
 
 5. Push and create a pull request
@@ -139,19 +139,22 @@ cargo test -p gosh-fetch-core
 When adding a new feature:
 
 1. If the feature involves core business logic, add it to `gosh-fetch-core`
-2. If it's UI-specific, add it to the appropriate frontend crate
-3. Ensure the feature works across all frontends if applicable
-4. Update documentation as needed
+2. If it's UI-specific, add it to `gosh-fetch-gtk`
+3. Update documentation as needed
 
 ## Reporting Issues
 
 When reporting issues, please include:
 - Operating system and version
-- Desktop environment (GNOME, KDE, COSMIC, etc.)
-- Frontend being used (GTK, COSMIC, Qt)
+- Desktop environment (GNOME, Cinnamon, etc.)
 - Steps to reproduce the issue
 - Expected vs actual behavior
 - Error messages or logs if applicable
+
+To get logs, run with:
+```bash
+RUST_LOG=debug cargo run
+```
 
 ## License
 
