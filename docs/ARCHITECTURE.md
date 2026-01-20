@@ -7,18 +7,18 @@ This document describes the technical architecture of Gosh-Fetch.
 Gosh-Fetch is a Linux download manager built as a Rust workspace:
 
 - **Core Library**: gosh-fetch-core (UI-agnostic business logic)
-- **GTK Frontend**: gosh-fetch-gtk (GTK4/libadwaita)
+- **Qt Frontend**: gosh-fetch-qt (Qt 6 / Qt Quick)
 - **Download Engine**: gosh-dl (native Rust library)
 - **Database**: SQLite with rusqlite
 
-The architecture supports multiple frontends through the shared core library, though currently only the GTK frontend is implemented.
+The architecture supports multiple frontends through the shared core library, with Qt Quick as the current frontend.
 
 ## Technology Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | Core Library | Rust | Shared business logic |
-| GTK Frontend | GTK4 + libadwaita | GNOME desktop integration |
+| Qt Frontend | Qt 6 + Qt Quick | Cross-desktop Linux UI |
 | Download Engine | gosh-dl | HTTP/BitTorrent handling |
 | Database | SQLite (rusqlite) | Local data persistence |
 | Async Runtime | Tokio | Concurrent download operations |
@@ -43,20 +43,12 @@ Gosh-Fetch-Linux/
 │   │   │       └── settings.rs   # Settings/Trackers operations
 │   │   └── Cargo.toml
 │   │
-│   └── gosh-fetch-gtk/           # GTK4/libadwaita frontend
+│   └── gosh-fetch-qt/            # Qt 6 / Qt Quick frontend
 │       ├── src/
-│       │   ├── main.rs           # Application entry point
-│       │   ├── application.rs    # AdwApplication subclass
-│       │   ├── window/           # Main window implementation
-│       │   ├── views/            # Page views (Downloads, Completed, Settings)
-│       │   ├── widgets/          # Reusable widgets (DownloadRow)
-│       │   ├── dialogs/          # Modal dialogs (AddDownloadDialog, TorrentPreviewDialog)
-│       │   ├── models/           # GObject wrappers (DownloadObject)
-│       │   └── tray/             # System tray (ksni)
-│       ├── resources/            # GResource files (UI, CSS, icons)
-│       │   ├── resources.gresource.xml
-│       │   └── ui/               # UI definition files and CSS
-│       ├── build.rs              # Compiles GResource files
+│       │   ├── main.rs           # Qt entry point
+│       │   └── qml.rs            # cxx-qt bindings
+│       ├── qml/                  # QML UI
+│       ├── build.rs              # cxx-qt build glue
 │       └── Cargo.toml
 │
 ├── migrations/
@@ -75,9 +67,9 @@ Gosh-Fetch-Linux/
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    GTK4/libadwaita Frontend                      │
+│                    Qt 6 / Qt Quick Frontend                      │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐ │
-│  │   Views     │ ←→ │   State     │ ←→ │  Command Channel    │ │
+│  │   QML UI    │ ←→ │   State     │ ←→ │  Command Channel    │ │
 │  │ (Downloads, │    │ (Downloads, │    │  (async_channel)    │ │
 │  │  Settings)  │    │  Stats)     │    │                     │ │
 │  └─────────────┘    └─────────────┘    └──────────┬──────────┘ │
@@ -167,9 +159,9 @@ SQLite persistence layer:
 - `SettingsDb`: Key-value settings storage
 - `TrackersDb`: BitTorrent tracker URL management
 
-### GTK Frontend (gosh-fetch-gtk)
+### Qt Frontend (gosh-fetch-qt)
 
-Native GNOME experience using GTK4 and libadwaita.
+Qt 6 / Qt Quick application backed by cxx-qt bindings.
 
 #### Application (application.rs)
 
@@ -291,7 +283,7 @@ Key characteristics:
 
 The frontend uses a two-thread architecture:
 
-1. **UI Thread**: Runs the GTK main loop
+1. **UI Thread**: Runs the Qt event loop / scene graph
 2. **Background Thread**: Runs tokio runtime with DownloadService
 3. **async_channel**: Bidirectional communication between threads
    - `Sender<EngineCommand>`: UI sends commands to engine

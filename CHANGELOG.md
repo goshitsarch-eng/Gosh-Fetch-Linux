@@ -5,16 +5,17 @@ All notable changes to Gosh-Fetch will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2026-01-17
+## [2.1.0] - 2026-01-20
 
 ### Added
+- Qt 6 / Qt Quick frontend (`gosh-fetch-qt`)
 - Desktop notifications when downloads complete (respects enable_notifications setting)
 - Download scheduling with date/time picker in Add Download dialog
 - Automatic restoration of incomplete downloads on application startup
 
 ### Fixed
-- Proxy settings now correctly passed to the download engine
-- Removed FTP protocol mention from UI (not supported by engine)
+- Resume fallback on failed HTTP resumes
+- Redirect resolution to avoid HTML mirror pages (SourceForge-style)
 
 ## [2.0.0] - 2026-01-10
 

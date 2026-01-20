@@ -1,11 +1,11 @@
 [Desktop Entry]
 Name=Gosh Fetch
 Comment=Modern download manager for Linux
-Exec=gosh-fetch-gtk %U
+Exec=gosh-fetch-qt %U
 Icon=io.github.gosh.Fetch
 Terminal=false
 Type=Application
-Categories=Network;FileTransfer;GTK;
-StartupWMClass=gosh-fetch
+Categories=Network;FileTransfer;
+StartupWMClass=gosh-fetch-qt
 MimeType=application/x-bittorrent;x-scheme-handler/magnet;
 Keywords=download;torrent;magnet;

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<interface>
-  <template class="SettingsView" parent="GtkBox">
-    <property name="orientation">vertical</property>
-  </template>
-</interface>

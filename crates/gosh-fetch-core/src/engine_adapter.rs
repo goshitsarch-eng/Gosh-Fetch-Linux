@@ -7,6 +7,7 @@ use gosh_dl::{
     DownloadEngine, DownloadId, DownloadOptions, DownloadState as EngineState, DownloadStatus,
     PeerInfo as EnginePeerInfo, TorrentFile,
 };
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE, COOKIE, RANGE, REFERER, USER_AGENT};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -53,7 +54,15 @@ impl EngineAdapter {
         options: Option<FrontendOptions>,
     ) -> Result<String, gosh_dl::EngineError> {
         let opts = options.map(convert_options).unwrap_or_default();
-        let id = self.engine.add_http(&url, opts).await?;
+        let resolved_url = resolve_http_url(
+            &url,
+            opts.referer.as_deref(),
+            opts.user_agent.as_deref(),
+            &opts.headers,
+            opts.cookies.as_deref(),
+        )
+        .await?;
+        let id = self.engine.add_http(&resolved_url, opts).await?;
         Ok(id.as_uuid().to_string())
     }
 
@@ -66,7 +75,15 @@ impl EngineAdapter {
         let opts = options.map(convert_options).unwrap_or_default();
         let mut gids = Vec::new();
         for url in urls {
-            let id = self.engine.add_http(&url, opts.clone()).await?;
+            let resolved_url = resolve_http_url(
+                &url,
+                opts.referer.as_deref(),
+                opts.user_agent.as_deref(),
+                &opts.headers,
+                opts.cookies.as_deref(),
+            )
+            .await?;
+            let id = self.engine.add_http(&resolved_url, opts.clone()).await?;
             gids.push(id.as_uuid().to_string());
         }
         Ok(gids)
@@ -235,6 +252,110 @@ fn parse_gid(gid: &str) -> Result<DownloadId, gosh_dl::EngineError> {
     })
 }
 
+async fn resolve_http_url(
+    url: &str,
+    referer: Option<&str>,
+    user_agent: Option<&str>,
+    headers: &[(String, String)],
+    cookies: Option<&[String]>,
+) -> Result<String, gosh_dl::EngineError> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .build()
+        .map_err(|e| gosh_dl::EngineError::Internal(format!("Failed to build HTTP client: {}", e)))?;
+
+    let mut head_req = client.head(url);
+    if let Some(ua) = user_agent {
+        head_req = head_req.header(USER_AGENT, ua);
+    }
+    if let Some(r) = referer {
+        head_req = head_req.header(REFERER, r);
+    }
+    for (key, value) in headers {
+        head_req = head_req.header(key, value);
+    }
+    if let Some(cookie_list) = cookies {
+        let cookie_header = cookie_list.join("; ");
+        head_req = head_req.header(COOKIE, cookie_header);
+    }
+
+    let head_resp = head_req.send().await;
+    let (final_url, content_type, content_disp) = match head_resp {
+        Ok(resp) if resp.status().is_success() => {
+            let content_type = resp
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            let content_disp = resp
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            (resp.url().to_string(), content_type, content_disp)
+        }
+        _ => {
+            let mut get_req = client.get(url).header(RANGE, "bytes=0-0");
+            if let Some(ua) = user_agent {
+                get_req = get_req.header(USER_AGENT, ua);
+            }
+            if let Some(r) = referer {
+                get_req = get_req.header(REFERER, r);
+            }
+            for (key, value) in headers {
+                get_req = get_req.header(key, value);
+            }
+            if let Some(cookie_list) = cookies {
+                let cookie_header = cookie_list.join("; ");
+                get_req = get_req.header(COOKIE, cookie_header);
+            }
+            let resp = get_req.send().await.map_err(|e| {
+                gosh_dl::EngineError::Network {
+                    kind: gosh_dl::NetworkErrorKind::Other,
+                    message: format!("Failed to resolve URL: {}", e),
+                    retryable: true,
+                }
+            })?;
+            let content_type = resp
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            let content_disp = resp
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            (resp.url().to_string(), content_type, content_disp)
+        }
+    };
+
+    if looks_like_html_download(&final_url, content_type.as_deref(), content_disp.as_deref()) {
+        return Err(gosh_dl::EngineError::InvalidInput {
+            field: "url",
+            message: "URL resolved to an HTML page. Try the direct download link.".to_string(),
+        });
+    }
+
+    Ok(final_url)
+}
+
+fn looks_like_html_download(url: &str, content_type: Option<&str>, content_disp: Option<&str>) -> bool {
+    let Some(ct) = content_type else { return false };
+    if !ct.to_ascii_lowercase().starts_with("text/html") {
+        return false;
+    }
+
+    if let Some(cd) = content_disp {
+        if cd.to_ascii_lowercase().contains("attachment") {
+            return false;
+        }
+    }
+
+    let url_lower = url.to_ascii_lowercase();
+    !(url_lower.ends_with(".html") || url_lower.ends_with(".htm"))
+}
+
 /// Convert frontend options to gosh-dl options
 fn convert_options(opts: FrontendOptions) -> DownloadOptions {
     let mut headers = Vec::new();
@@ -376,5 +497,29 @@ mod tests {
         assert_eq!(parse_speed("1K"), Some(1024));
         assert_eq!(parse_speed("1M"), Some(1024 * 1024));
         assert_eq!(parse_speed("2G"), Some(2 * 1024 * 1024 * 1024));
+    }
+
+    #[test]
+    fn test_html_download_detection() {
+        assert!(looks_like_html_download(
+            "https://example.com/download",
+            Some("text/html; charset=utf-8"),
+            None
+        ));
+        assert!(!looks_like_html_download(
+            "https://example.com/file.html",
+            Some("text/html; charset=utf-8"),
+            None
+        ));
+        assert!(!looks_like_html_download(
+            "https://example.com/file.bin",
+            Some("application/octet-stream"),
+            None
+        ));
+        assert!(!looks_like_html_download(
+            "https://example.com/file.bin",
+            Some("text/html; charset=utf-8"),
+            Some("attachment; filename=\"file.bin\"")
+        ));
     }
 }

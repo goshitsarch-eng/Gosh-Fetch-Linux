@@ -1,6 +1,6 @@
 # Gosh Fetch
 
-A native Linux download manager built entirely in Rust. Gosh Fetch handles both HTTP/HTTPS downloads and BitTorrent with a clean GTK4/libadwaita interface.
+A native Linux download manager built entirely in Rust. Gosh Fetch handles both HTTP/HTTPS downloads and BitTorrent with a modern Qt 6 / Qt Quick interface.
 
 ## Philosophy
 
@@ -26,17 +26,17 @@ The engine handles HTTP/HTTPS with segmented downloads and automatic resume, plu
 
 You'll need [Rust](https://rustup.rs/) 1.77 or newer.
 
-The GTK4 frontend requires GTK4 4.14+ and libadwaita 1.5+. Install the development packages for your distro:
+The Qt frontend requires Qt 6 development packages for your distro:
 
 ```bash
 # Debian/Ubuntu
-sudo apt install libgtk-4-dev libadwaita-1-dev
+sudo apt install qt6-base-dev qt6-declarative-dev
 
 # Fedora
-sudo dnf install gtk4-devel libadwaita-devel
+sudo dnf install qt6-qtbase-devel qt6-qtdeclarative-devel
 
 # Arch
-sudo pacman -S gtk4 libadwaita
+sudo pacman -S qt6-base qt6-declarative
 ```
 
 ## Building
@@ -69,7 +69,7 @@ Gosh Fetch collects nothing. No telemetry, no analytics, no phoning home. The ap
 
 ## Architecture
 
-The project is a Rust workspace with two crates. The `gosh-fetch-core` crate contains shared logic that's UI-agnostic. The `gosh-fetch-gtk` crate provides the GTK4/libadwaita frontend. Database migrations for SQLite are in the `migrations/` directory. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical breakdown.
+The project is a Rust workspace with two crates. The `gosh-fetch-core` crate contains shared logic that's UI-agnostic. The `gosh-fetch-qt` crate provides the Qt 6 / Qt Quick frontend. Database migrations for SQLite are in the `migrations/` directory. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full technical breakdown.
 
 ## License
 

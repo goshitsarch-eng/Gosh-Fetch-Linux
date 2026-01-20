@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Gosh-Fetch! This document provide
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) 1.77+
-- GTK4 4.14+ and libadwaita 1.5+ development libraries
+- Qt 6 (Qt Base + Qt Quick) development libraries
 
 ### Getting Started
 
@@ -19,7 +19,7 @@ cd Gosh-Fetch-linux
 
 2. Install dependencies (Debian/Ubuntu example):
 ```bash
-sudo apt install libgtk-4-dev libadwaita-1-dev
+sudo apt install qt6-base-dev qt6-declarative-dev
 ```
 
 3. Build the project:
@@ -38,8 +38,8 @@ cargo run
 |---------|-------------|
 | `cargo build` | Build all crates (development) |
 | `cargo build --release` | Build all crates (production) |
-| `cargo run` | Run the GTK frontend |
-| `cargo run -p gosh-fetch-gtk` | Run GTK frontend explicitly |
+| `cargo run` | Run the Qt frontend |
+| `cargo run -p gosh-fetch-qt` | Run Qt frontend explicitly |
 | `cargo test` | Run all tests |
 | `cargo clippy` | Run Clippy linter |
 | `cargo fmt` | Format code |
@@ -58,14 +58,11 @@ Gosh-Fetch-linux/
 │   │   │   └── utils.rs     # Utilities
 │   │   └── Cargo.toml
 │   │
-│   └── gosh-fetch-gtk/      # GTK4/libadwaita frontend
+│   └── gosh-fetch-qt/       # Qt 6 / Qt Quick frontend
 │       ├── src/
-│       │   ├── window/      # Main window
-│       │   ├── views/       # Page views
-│       │   ├── widgets/     # Reusable widgets
-│       │   ├── dialogs/     # Modal dialogs
-│       │   └── tray/        # System tray
-│       ├── resources/       # GResource files
+│       │   ├── main.rs      # Qt entrypoint
+│       │   └── qml.rs       # cxx-qt bindings
+│       ├── qml/             # QML UI
 │       └── Cargo.toml
 │
 ├── migrations/              # SQLite database schema
@@ -78,7 +75,7 @@ Gosh-Fetch-linux/
 - Run `cargo fmt` before committing
 - Run `cargo clippy` and address warnings
 - Add documentation comments for public APIs
-- Use GTK4/libadwaita idioms for GTK frontend code
+- Use Qt Quick best practices for frontend QML code
 - Use async/await with tokio for async operations
 
 ### Commit Message Guidelines
@@ -139,7 +136,7 @@ cargo test -p gosh-fetch-core
 When adding a new feature:
 
 1. If the feature involves core business logic, add it to `gosh-fetch-core`
-2. If it's UI-specific, add it to `gosh-fetch-gtk`
+2. If it's UI-specific, add it to `gosh-fetch-qt`
 3. Update documentation as needed
 
 ## Reporting Issues

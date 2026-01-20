@@ -1,22 +1,14 @@
 #!/bin/bash
 set -e
 
-VERSION="${1:-2.0.0}"
+VERSION="${1:-2.1.0}"
 ARCH="${2:-amd64}"
-FRONTEND="${3:-gtk}"
+FRONTEND="${3:-qt}"
 
-case "$FRONTEND" in
-  gtk)
-    PACKAGE_NAME="gosh-fetch"
-    BINARY_NAME="gosh-fetch-gtk"
-    DEPENDS="libgtk-4-1 (>= 4.14), libadwaita-1-0 (>= 1.5), libdbus-1-3"
-    DESCRIPTION="Built with GTK4 and libadwaita for a native GNOME experience."
-    ;;
-  *)
-    echo "Unknown frontend: $FRONTEND (use gtk)"
-    exit 1
-    ;;
-esac
+PACKAGE_NAME="gosh-fetch"
+BINARY_NAME="gosh-fetch-qt"
+DEPENDS="qt6-base (>= 6.2), qt6-declarative (>= 6.2), libdbus-1-3"
+DESCRIPTION="Built with Qt 6 / Qt Quick for a modern cross-desktop experience."
 
 # Create directory structure
 BUILD_DIR="build/${PACKAGE_NAME}_${VERSION}_${ARCH}"
@@ -26,6 +18,7 @@ mkdir -p "$BUILD_DIR/usr/bin"
 mkdir -p "$BUILD_DIR/usr/share/applications"
 mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "$BUILD_DIR/usr/share/metainfo"
+mkdir -p "$BUILD_DIR/usr/share/gosh-fetch/qml"
 mkdir -p "$BUILD_DIR/usr/share/doc/${PACKAGE_NAME}"
 
 # Copy binary
@@ -36,6 +29,7 @@ chmod 755 "$BUILD_DIR/usr/bin/${BINARY_NAME}"
 cp "../../gosh-fetch.desktop" "$BUILD_DIR/usr/share/applications/io.github.gosh.Fetch.desktop"
 cp "../../resources/io.github.gosh.Fetch.png" "$BUILD_DIR/usr/share/icons/hicolor/256x256/apps/"
 cp "../../io.github.gosh.Fetch.metainfo.xml" "$BUILD_DIR/usr/share/metainfo/"
+cp "../../crates/gosh-fetch-qt/qml/Main.qml" "$BUILD_DIR/usr/share/gosh-fetch/qml/"
 
 # Copy license
 cp "../../LICENSE" "$BUILD_DIR/usr/share/doc/${PACKAGE_NAME}/copyright"

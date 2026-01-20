@@ -2,7 +2,7 @@
 
 ## Product Overview
 
-Gosh-Fetch is a download manager for Linux that handles HTTP/HTTPS and BitTorrent downloads without requiring external dependencies. It provides a native GTK4 interface that integrates with GNOME-based desktops.
+Gosh-Fetch is a download manager for Linux that handles HTTP/HTTPS and BitTorrent downloads without requiring external dependencies. It provides a native Qt 6 / Qt Quick interface for modern Linux desktops.
 
 ## Objectives
 
@@ -59,10 +59,10 @@ Linux desktop users who need a download manager for:
 | Completed downloads history | Implemented | Persisted in database |
 | Settings panel | Implemented | All configurable options |
 | Real-time progress | Implemented | Speed, ETA, percentage |
-| System tray | Implemented | Via ksni |
+| System tray | Implemented | Qt Quick system tray integration |
 | Toast notifications | Implemented | Errors and completion |
 | Keyboard shortcuts | Implemented | Ctrl+N, Ctrl+Shift+P/R |
-| Dark/light theme | Implemented | System theme via libadwaita |
+| Dark/light theme | Implemented | Qt Quick controls + custom theme |
 
 ### Connection Settings
 
@@ -97,8 +97,8 @@ Linux desktop users who need a download manager for:
 ### Compatibility
 
 - Linux x86_64 and aarch64
-- GTK4 4.14+ and libadwaita 1.5+
-- GNOME, Cinnamon, and other GTK-based desktops
+- Qt 6 (Qt Base + Qt Quick)
+- GNOME, KDE Plasma, Cinnamon, and other Linux desktops
 
 ## Success Metrics
 
@@ -107,8 +107,8 @@ Not applicable - no analytics collected.
 ## Constraints
 
 - Single platform (Linux only)
-- Single frontend (GTK only, despite architecture supporting multiple)
-- Requires GTK4/libadwaita runtime libraries
+- Single frontend (Qt Quick)
+- Requires Qt 6 runtime libraries
 
 ## Future Considerations
 

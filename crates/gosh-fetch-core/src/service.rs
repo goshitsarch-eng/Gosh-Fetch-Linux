@@ -1,7 +1,7 @@
 //! Download service - bridges tokio async runtime with UI main loop
 
 use crate::engine_adapter::EngineAdapter;
-use crate::types::{Download, DownloadOptions, GlobalStats, Settings};
+use crate::types::{Download, DownloadOptions, DownloadType, GlobalStats, Settings};
 use gosh_dl::{DownloadEngine, DownloadEvent, EngineConfig};
 
 /// Commands sent from UI to the engine (via async channel)
@@ -76,7 +76,7 @@ pub struct DownloadService {
 impl DownloadService {
     /// Create a new download service with the given settings
     pub async fn new_async(settings: &Settings) -> Result<Self, gosh_dl::EngineError> {
-        let config = settings_to_config(settings);
+        let config = settings_to_engine_config(settings);
         let engine = DownloadEngine::new(config).await?;
         let adapter = EngineAdapter::new(engine);
 
@@ -226,7 +226,25 @@ async fn handle_command(
 
         EngineCommand::Resume(gid) => {
             if let Err(e) = adapter.resume(&gid).await {
-                let _ = ui_sender.send(UiMessage::Error(e.to_string())).await;
+                let mut retried = false;
+                if let Some(download) = adapter.get_status(&gid) {
+                    if download.download_type == DownloadType::Http {
+                        if let Some(url) = download.url.clone() {
+                            let _ = adapter.remove(&gid, false).await;
+                            if let Ok(new_gid) = adapter.add_download(url, None).await {
+                                let _ = ui_sender.send(UiMessage::DownloadRemoved(gid)).await;
+                                if let Some(new_download) = adapter.get_status(&new_gid) {
+                                    let _ = ui_sender.send(UiMessage::DownloadAdded(new_download)).await;
+                                }
+                                retried = true;
+                            }
+                        }
+                    }
+                }
+
+                if !retried {
+                    let _ = ui_sender.send(UiMessage::Error(e.to_string())).await;
+                }
             }
         }
 
@@ -273,7 +291,7 @@ async fn handle_command(
 }
 
 /// Convert settings to engine configuration
-fn settings_to_config(settings: &Settings) -> EngineConfig {
+pub fn settings_to_engine_config(settings: &Settings) -> EngineConfig {
     let download_dir = std::path::PathBuf::from(&settings.download_path);
 
     // Ensure download directory exists
@@ -312,6 +330,7 @@ fn settings_to_config(settings: &Settings) -> EngineConfig {
         download_dir,
         max_concurrent_downloads: settings.max_concurrent_downloads as usize,
         max_connections_per_download: settings.max_connections_per_server as usize,
+        min_segment_size: settings.min_segment_size as u64 * 1024,
         global_download_limit: if settings.download_speed_limit > 0 {
             Some(settings.download_speed_limit)
         } else {

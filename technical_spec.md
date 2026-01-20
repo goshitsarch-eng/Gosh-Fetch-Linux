@@ -1,6 +1,6 @@
 # Technical Specification
 
-Gosh-Fetch is a native Linux download manager written in Rust, providing HTTP/HTTPS segmented downloads and BitTorrent support through a clean GTK4/libadwaita interface.
+Gosh-Fetch is a native Linux download manager written in Rust, providing HTTP/HTTPS segmented downloads and BitTorrent support through a modern Qt 6 / Qt Quick interface.
 
 ## System Architecture
 
@@ -8,9 +8,8 @@ Gosh-Fetch is a native Linux download manager written in Rust, providing HTTP/HT
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    GTK4/libadwaita Frontend                         │
-│  GoshFetchApplication → GoshFetchWindow → Views (Downloads,        │
-│                                           Completed, Settings)      │
+│                    Qt 6 / Qt Quick Frontend                         │
+│  QML ApplicationWindow → Pages (Downloads, Completed, Settings)     │
 └─────────────────────────────────────┬───────────────────────────────┘
                                       │ async_channel
                                       │ EngineCommand ↓ / UiMessage ↑
@@ -33,7 +32,7 @@ Gosh-Fetch is a native Linux download manager written in Rust, providing HTTP/HT
 
 The application runs two main threads:
 
-1. **UI Thread**: GTK4 main loop handling all user interface operations
+1. **UI Thread**: Qt Quick scene graph and event loop handling all UI operations
 2. **Engine Thread**: Tokio runtime hosting the download engine and event processing
 
 Communication uses bounded async channels (capacity 100 messages):
@@ -47,12 +46,12 @@ The UI polls for updates every 1 second by sending `RefreshDownloads` and `Refre
 | Component | Technology | Version |
 |-----------|------------|---------|
 | Language | Rust | 1.77+ |
-| UI Framework | GTK4 + libadwaita | 4.14+ / 1.5+ |
+| UI Framework | Qt 6 + Qt Quick | 6.x |
 | Async Runtime | Tokio | 1.x |
 | Download Engine | gosh-dl | Git HEAD |
 | Database | SQLite (rusqlite) | 0.32 |
 | IPC | async_channel | 2.x |
-| System Tray | ksni | 0.2 |
+| System Tray | Qt Quick SystemTrayIcon | 6.x |
 
 ## Data Models
 
@@ -193,7 +192,7 @@ Engine responds:
 
 ## Build Requirements
 
-**Required**: Rust 1.77+, GTK4 4.14+, libadwaita 1.5+
+**Required**: Rust 1.77+, Qt 6 (Qt Base + Qt Quick)
 
 **Build targets**: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu
 
@@ -202,7 +201,7 @@ Engine responds:
 ## Known Limitations
 
 - Linux only (no Windows/macOS)
-- GTK frontend only (COSMIC and Qt frontends not yet implemented)
+- Single Qt Quick frontend (GTK removed)
 - No FTP protocol support (DownloadType::Ftp exists in types but engine doesn't support it)
 - No scheduled downloads (field exists in DownloadOptions but not exposed in UI)
 - No browser extension integration

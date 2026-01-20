@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<interface>
-  <template class="AddDownloadDialog" parent="AdwDialog">
-    <property name="title">Add Download</property>
-  </template>
-</interface>
